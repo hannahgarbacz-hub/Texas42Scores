@@ -44,9 +44,9 @@ Views are simple `<div id="..." class="view">` sections and are shown/hidden by 
   - `#bid-result-section` — shown after bidding to choose result (Made/Set) and complete the hand.
   - `#hand-history-card` with `#hand-history` lists completed hands and buttons for `Complete Game` and `Undo Last Hand`.
 
-- `#stats` — Stats and anomaly detection
-  - `#anomaly-content` — shows flagged anomalies.
+- `#stats` — Stats
   - `#stats-team-select` and `#team-stats-content` — show per-team statistics.
+  - `#stats-player-select` and `#player-stats-content` — show per-player (individual) statistics.
 
 - Fixed bottom controls: `.action-buttons` (outside `.container`) with `Clear All Data` (`app.clearTournament()`) and `Export to CSV` (`app.exportCSV()`).
 
@@ -127,8 +127,7 @@ Views are simple `<div id="..." class="view">` sections and are shown/hidden by 
   - `#bid-result-section` — shown after bidding to choose result (Made/Set) and complete the hand.
   - `#hand-history-card` with `#hand-history` lists completed hands and buttons for `Complete Game` and `Undo Last Hand`.
 
-- `#stats` — Stats and anomaly detection
-  - `#anomaly-content` — shows flagged anomalies.
+- `#stats` — Stats
   - `#stats-team-select` and `#team-stats-content` — show per-team statistics.
   - `#stats-player-select` and `#player-stats-content` — show per-player (individual) statistics.
 

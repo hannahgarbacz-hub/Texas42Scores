@@ -250,8 +250,7 @@
             border: 1px solid #ffeaa7;
         }
 
-        /* FIXED: Button container to prevent overlap */
-        .action-buttons {
+    .action-buttons {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -526,12 +525,6 @@
         <div id="stats" class="view">
             <h1>Statistical Analysis</h1>
             <div class="card">
-                <h2>Anomaly Detection</h2>
-                <p style="margin-bottom: 15px;">Flagged patterns that may indicate unusual bidding behavior:</p>
-                <div id="anomaly-content"></div>
-            </div>
-            
-            <div class="card">
                 <h2>Team Statistics</h2>
                 <label for="stats-team-select">Select Team:</label>
                 <select id="stats-team-select" onchange="app.displayTeamStats()">
@@ -579,35 +572,9 @@
             </div>
 
             <div class="card">
-                <h2>Record Club Game</h2>
-                <div class="grid-2">
-                    <div>
-                        <label>Team 1 - Player A:</label>
-                        <select id="club-team1-p1"></select>
-                        <label>Team 1 - Player B:</label>
-                        <select id="club-team1-p2"></select>
-                    </div>
-                    <div>
-                        <label>Team 2 - Player A:</label>
-                        <select id="club-team2-p1"></select>
-                        <label>Team 2 - Player B:</label>
-                        <select id="club-team2-p2"></select>
-                    </div>
-                </div>
-                <div class="grid-2" style="margin-top:10px;">
-                    <div>
-                        <label for="club-team1-marks">Team 1 Marks:</label>
-                        <input type="number" id="club-team1-marks" min="0" value="0">
-                    </div>
-                    <div>
-                        <label for="club-team2-marks">Team 2 Marks:</label>
-                        <input type="number" id="club-team2-marks" min="0" value="0">
-                    </div>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:15px;">
-                    <button onclick="app.recordClubGame()" class="success">Record Club Game</button>
-                    <button onclick="app.clearClubData()" class="danger">Clear Club Games</button>
-                    <button onclick="app.showClubNewGameForm()" class="secondary">Start Club Game</button>
+                <h2>Club Games</h2>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="app.showClubNewGameForm()" class="success">Start Club Game</button>
                 </div>
                 <h3 style="margin-top:15px;">Club Game History</h3>
                 <div id="club-games" class="hand-history"></div>
@@ -686,10 +653,22 @@
         </div>
     </div>
 
-    <!-- FIXED: Button container to prevent overlap -->
+    <!-- Button container to prevent overlap -->
     <div class="action-buttons">
         <button onclick="app.clearTournament()" class="clear-btn danger">Clear All Data</button>
         <button onclick="app.exportCSV()" class="export-btn success">Export to CSV</button>
+    </div>
+
+    <!-- Developer panel: hidden unless ?dev=1 is present in the URL -->
+    <div id="dev-panel" style="display:none; padding:12px; border-top:1px solid #ddd; background:#fafafa;">
+        <h3>Developer: Anomaly Detection Runner</h3>
+        <p style="margin:6px 0; color:#666;">Upload a local tournament JSON export (or saved tournament file) and run anomaly detection locally. This panel is only shown when <code>?dev=1</code> is present in the URL.</p>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <input type="file" id="dev-anomaly-file" accept="application/json" />
+            <button id="dev-run-btn" class="secondary" onclick="handleDevAnomalyFile()">Run Detection</button>
+            <button id="dev-download-btn" class="success" onclick="downloadDevAnomalies()" disabled>Download Results</button>
+        </div>
+        <div id="dev-anomaly-results" style="margin-top:10px; max-height:300px; overflow:auto;"></div>
     </div>
 
     <script>
@@ -1036,7 +1015,7 @@
                     return;
                 }
                 
-                // FIXED: Establish fixed seating order (dealer will rotate within this order)
+                // Establish fixed seating order (dealer will rotate within this order)
                 const seatingOrder = [
                     firstPlayer, // Position 0: Team A, Player 1 (initial dealer)
                     secondPlayer, // Position 1: Team B, Player 1
@@ -1058,7 +1037,7 @@
                         [secondTeam]: 0
                     },
                     dealerIndex: 0, // Tracks which position (0-3) is dealer
-                    seatingOrder: seatingOrder // FIXED: Fixed order for entire game
+                    seatingOrder: seatingOrder
                 };
                 
                 this.tournament.games[gameId] = this.currentGame;
@@ -1190,7 +1169,7 @@
                 document.getElementById('team1-status').textContent = team1Won ? 'WON' : 'Playing';
                 document.getElementById('team2-status').textContent = team2Won ? 'WON' : 'Playing';
                 
-                // FIXED: Use seating order and dealerIndex to calculate positions
+                // Use seating order and dealerIndex to calculate positions
                 const dealer = this.currentGame.seatingOrder[this.currentGame.dealerIndex % 4];
                 const firstBidder = this.currentGame.seatingOrder[(this.currentGame.dealerIndex + 1) % 4];
                 
@@ -1407,7 +1386,7 @@
                 
                 this.currentGame.hands.push(hand);
                 
-                // CORRECTED: When set, opposing team gets the marks
+                // When set, opposing team gets the marks
                 if (result === 'made') {
                     this.currentGame.marks[winnerTeam] += marks;
                 } else {
@@ -1457,7 +1436,7 @@
                     if (lastHand.result === 'made') {
                         this.currentGame.marks[bidderTeam] -= lastHand.marks;
                     } else {
-                        // CORRECTED: When undoing a "set", subtract marks from opposing team
+                        // When undoing a "set", subtract marks from opposing team
                         this.currentGame.marks[opposingTeam] -= lastHand.marks;
                     }
                     
@@ -1921,68 +1900,7 @@
                 `;
             }
 
-            updateAnomalyDetection() {
-                const anomalies = [];
-                
-                this.tournament.teams.forEach(team => {
-                    if (team.isBye) return;
-                    
-                    if (team.stats.totalBids >= 5) {
-                        const successRate = team.stats.successfulBids / team.stats.totalBids;
-                        
-                        if (successRate > 0.85) {
-                            anomalies.push({
-                                team: team.name,
-                                type: 'High Success Rate',
-                                detail: `${(successRate * 100).toFixed(1)}% bid success rate (${team.stats.successfulBids}/${team.stats.totalBids} bids)`
-                            });
-                        }
-                        
-                        if (successRate < 0.3) {
-                            anomalies.push({
-                                team: team.name,
-                                type: 'Low Success Rate',
-                                detail: `${(successRate * 100).toFixed(1)}% bid success rate (${team.stats.successfulBids}/${team.stats.totalBids} bids)`
-                            });
-                        }
-                    }
-                });
-                
-                Object.values(this.tournament.games).forEach(game => {
-                    if (game.isByeGame) return;
-                    
-                    if (game.hands && game.hands.length > 10) {
-                        const actualBids = game.hands.filter(h => h.result !== 'all-pass');
-                        if (actualBids.length >= 5) {
-                            const team1Players = this.tournament.teams.find(t => t.id === game.team1).players;
-                            const team1Bids = actualBids.filter(h => team1Players.includes(h.winner)).length;
-                            const team2Bids = actualBids.length - team1Bids;
-                            
-                            if (Math.abs(team1Bids - team2Bids) > 6) {
-                                const team = this.tournament.teams.find(t => t.id === (team1Bids > team2Bids ? game.team1 : game.team2));
-                                anomalies.push({
-                                    team: team.name,
-                                    type: 'Bid Dominance',
-                                    detail: `Won ${Math.max(team1Bids, team2Bids)} out of ${actualBids.length} bidding hands`
-                                });
-                            }
-                        }
-                    }
-                });
-                
-                const anomalyContent = document.getElementById('anomaly-content');
-                if (anomalies.length === 0) {
-                    anomalyContent.innerHTML = '<p style="color: var(--success);">No unusual patterns detected.</p>';
-                } else {
-                    anomalyContent.innerHTML = anomalies.map(a => `
-                        <div class="card stat-card danger">
-                            <h4>${a.team}</h4>
-                            <p><strong>${a.type}</strong></p>
-                            <p>${a.detail}</p>
-                        </div>
-                    `).join('');
-                }
-            }
+            // Anomaly detection runner is kept in code for developer use.
 
             displayTeamStats() {
                 const teamId = document.getElementById('stats-team-select').value;
@@ -2173,7 +2091,7 @@
                         // ensure the selected roster is loaded into the UI
                         this.selectClubRoster();
                     }
-                } catch (e) { /* non-fatal */ }
+                } catch (e) { /* ignored */ }
 
                 // Initialize club state and load any existing games keyed by roster id
                 const gamesKey = `clubGames_${id}`;
@@ -2239,8 +2157,9 @@
 
             populateClubPlayerSelects() {
                 const players = this.club && this.club.players ? this.club.players : [];
-                const ids = ['club-team1-p1','club-team1-p2','club-team2-p1','club-team2-p2'];
-                ids.forEach(id => {
+                // Populate the club start form selects (first bidder, partner A, second bidder, partner B)
+                const startIds = ['club-first-bidder-select','club-partner-a-select','club-second-bidder-select','club-partner-b-select'];
+                startIds.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
                     el.innerHTML = '<option value="">-- Select player --</option>';
@@ -2250,51 +2169,7 @@
                 try { this.updateClubPlayerCounter(); } catch (e) {}
             }
 
-            recordClubGame() {
-                if (!this.club || !this.club.id) {
-                    this.showMessage('Please save or select a roster first', 'error');
-                    return;
-                }
-                const p1 = document.getElementById('club-team1-p1').value;
-                const p2 = document.getElementById('club-team1-p2').value;
-                const p3 = document.getElementById('club-team2-p1').value;
-                const p4 = document.getElementById('club-team2-p2').value;
-                const m1 = parseInt(document.getElementById('club-team1-marks').value) || 0;
-                const m2 = parseInt(document.getElementById('club-team2-marks').value) || 0;
-
-                const players = [p1,p2,p3,p4];
-                if (players.some(p => !p)) { this.showMessage('Please select all 4 players', 'error'); return; }
-                // check duplicate players
-                const uniq = new Set(players);
-                if (uniq.size !== 4) { this.showMessage('Players must be unique across both teams', 'error'); return; }
-
-                const game = {
-                    id: `club-${this.club.id}-${Date.now()}`,
-                    team1: [p1,p2],
-                    team2: [p3,p4],
-                    marks: { team1: m1, team2: m2 },
-                    timestamp: new Date().toISOString()
-                };
-
-                this.club.games.push(game);
-                const gamesKey = `clubGames_${this.club.id}`;
-                try { localStorage.setItem(gamesKey, JSON.stringify(this.club.games)); } catch (e) { console.error('Failed saving club games', e); }
-
-                this.updateClubView();
-                try { this.updateClubPlayerCounter(); } catch (e) {}
-                this.showMessage('Club game recorded', 'success');
-            }
-
-            clearClubData() {
-                if (!this.club || !this.club.id) { this.showMessage('No roster loaded', 'error'); return; }
-                if (!confirm('Clear all saved games for this roster? This cannot be undone.')) return;
-                this.club.games = [];
-                const gamesKey = `clubGames_${this.club.id}`;
-                localStorage.removeItem(gamesKey);
-                this.updateClubView();
-                try { this.updateClubPlayerCounter(); } catch (e) {}
-                this.showMessage('Club games cleared', 'success');
-            }
+            
 
             renameClubRoster() {
                 const sel = document.getElementById('club-roster-select');
@@ -2798,10 +2673,52 @@
                         }
                     });
                     Array.from(playersSet).sort().forEach(p => {
-                        playerSelect.innerHTML += `<option value="${p}">${p}</option>`;
-                    });
+                            playerSelect.innerHTML += `<option value="${p}">${p}</option>`;
+                        });
                 }
-                this.updateAnomalyDetection();
+
+            }
+
+            // Developer-only anomaly detection runner (file-based). This method returns an array of anomaly objects.
+            runAnomalyDetectionForData(tournamentData) {
+                const anomalies = [];
+                if (!tournamentData || !tournamentData.teams) return anomalies;
+
+                // Team-level rates
+                tournamentData.teams.forEach(team => {
+                    if (team.isBye) return;
+                    if (team.stats && team.stats.totalBids >= 5) {
+                        const successRate = team.stats.successfulBids / team.stats.totalBids;
+                        if (successRate > 0.85) {
+                            anomalies.push({ team: team.name, type: 'High Success Rate', detail: `${(successRate * 100).toFixed(1)}% bid success rate (${team.stats.successfulBids}/${team.stats.totalBids} bids)` });
+                        }
+                        if (successRate < 0.3) {
+                            anomalies.push({ team: team.name, type: 'Low Success Rate', detail: `${(successRate * 100).toFixed(1)}% bid success rate (${team.stats.successfulBids}/${team.stats.totalBids} bids)` });
+                        }
+                    }
+                });
+
+                // Game-level dominance checks
+                const games = tournamentData.games || {};
+                Object.values(games).forEach(game => {
+                    if (!game || game.isByeGame) return;
+                    if (game.hands && game.hands.length > 10) {
+                        const actualBids = game.hands.filter(h => h.result !== 'all-pass');
+                        if (actualBids.length >= 5) {
+                            const team1Obj = tournamentData.teams.find(t => t.id === game.team1) || { players: [] };
+                            const team1Players = team1Obj.players || [];
+                            const team1Bids = actualBids.filter(h => team1Players.includes(h.winner)).length;
+                            const team2Bids = actualBids.length - team1Bids;
+                            if (Math.abs(team1Bids - team2Bids) > 6) {
+                                const teamId = team1Bids > team2Bids ? game.team1 : game.team2;
+                                const team = tournamentData.teams.find(t => t.id === teamId) || { name: teamId };
+                                anomalies.push({ team: team.name, type: 'Bid Dominance', detail: `Won ${Math.max(team1Bids, team2Bids)} out of ${actualBids.length} bidding hands in game ${game.id || game.gameId || '(unknown)'}` });
+                            }
+                        }
+                    }
+                });
+
+                return anomalies;
             }
         }
 
