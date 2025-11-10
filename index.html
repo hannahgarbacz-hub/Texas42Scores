@@ -549,7 +549,12 @@
                 <div id="player-stats-content"></div>
             </div>
 
-            <!-- Club Night Section -->
+            <!-- Club Night card(s) removed from Stats view and relocated to dedicated Club view -->
+        </div>
+
+        <!-- Dedicated Club Night View -->
+        <div id="club" class="view">
+            <h1>Club Night</h1>
             <div class="card">
                 <h2>Club Night (Roster)</h2>
                 <label for="club-name">Club Name (optional):</label>
@@ -602,9 +607,81 @@
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <button onclick="app.recordClubGame()" class="success">Record Club Game</button>
                     <button onclick="app.clearClubData()" class="danger">Clear Club Games</button>
+                    <button onclick="app.showClubNewGameForm()" class="secondary">Start Club Game</button>
                 </div>
                 <h3 style="margin-top:15px;">Club Game History</h3>
                 <div id="club-games" class="hand-history"></div>
+            </div>
+            <!-- Club game play UI (mirrors tournament game flow but scoped to club games) -->
+            <div class="card" id="club-new-game-form" style="display:none;">
+                <h2>Start Club Game</h2>
+                <div class="grid-2">
+                    <div>
+                        <label for="club-first-bidder-select">First Bidder (Team A Position 1):</label>
+                        <select id="club-first-bidder-select"></select>
+                        <label for="club-partner-a-select">Partner for Team A (Team A Position 2):</label>
+                        <select id="club-partner-a-select"></select>
+                    </div>
+                    <div>
+                        <label for="club-second-bidder-select">Second Bidder (Team B Position 1):</label>
+                        <select id="club-second-bidder-select"></select>
+                        <label for="club-partner-b-select">Partner for Team B (Team B Position 2):</label>
+                        <select id="club-partner-b-select"></select>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="app.confirmStartClubGame()" class="success">Confirm Start Club Game</button>
+                    <button onclick="app.cancelStartClubGame()" class="secondary">Cancel</button>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+                    <input type="text" id="club-add-player-input" placeholder="Add player to roster" style="flex:1;"/>
+                    <button id="club-add-player-btn" class="secondary" onclick="app.addPlayerToRosterFromGame()">Add</button>
+                </div>
+            </div>
+
+            <div class="card" id="club-current-game-info" style="display:none;">
+                <h2>Current Club Game: <span id="club-game-title"></span></h2>
+                <div class="grid-2">
+                    <div class="stat-card">
+                        <h3 id="club-team1-name">Team 1</h3>
+                        <p>Marks: <strong id="club-team1-marks">0</strong></p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="club-team2-name">Team 2</h3>
+                        <p>Marks: <strong id="club-team2-marks">0</strong></p>
+                    </div>
+                </div>
+                <p style="margin-top: 10px;">Next Dealer: <strong id="club-next-dealer"></strong></p>
+                <p>Next Bid Position: <strong id="club-next-bidder"></strong></p>
+            </div>
+
+            <div class="card" id="club-hand-entry-card" style="display:none;">
+                <h2>Record Bids for Club Hand #<span id="club-hand-number"></span></h2>
+                <div id="club-sequential-bidding-section" style="display:none;">
+                    <div class="current-bidder" id="club-current-bidder-display"></div>
+                    <div class="bid-history" id="club-bid-history-display"></div>
+                    <div id="club-current-bid-options"></div>
+                    <button onclick="app.recordCurrentBidClub()" class="success">Record Bid</button>
+                    <button onclick="app.cancelClubHand()" class="danger" style="margin-top:10px;">Cancel Hand</button>
+                </div>
+                <div id="club-all-pass-message" class="all-pass-message hidden"><strong>All players passed!</strong></div>
+                <!-- Start Hand Button will be inserted here by JavaScript -->
+            </div>
+
+            <div id="club-bid-result-section"></div>
+
+            <div class="card" id="club-hand-history-card" style="display:none;">
+                <h2>Club Hand History</h2>
+                <div class="hand-entry header">
+                    <div>Hand #</div>
+                    <div>Bid Details</div>
+                    <div>Result</div>
+                </div>
+                <div id="club-hand-history"></div>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button onclick="app.completeClubGame()" class="success" style="flex:1;">Complete Club Game</button>
+                    <button onclick="app.undoLastClubHand()" class="danger" style="flex:1;">Undo Last Hand</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1430,6 +1507,383 @@
                 this.notify();
                 this.showView('leaderboard');
                 this.showMessage('Game completed successfully!', 'success');
+            }
+
+            /* ------------------ Club game play (bidding flow) ------------------ */
+            showClubNewGameForm() {
+                // populate first/second bidder selects and partner selects from current roster
+                const first = document.getElementById('club-first-bidder-select');
+                const second = document.getElementById('club-second-bidder-select');
+                const partnerA = document.getElementById('club-partner-a-select');
+                const partnerB = document.getElementById('club-partner-b-select');
+                if (!first || !second || !partnerA || !partnerB) return;
+                first.innerHTML = '<option value="">-- Select First Bidder --</option>';
+                second.innerHTML = '<option value="">-- Select Second Bidder --</option>';
+                partnerA.innerHTML = '<option value="">-- Select Partner (Team A) --</option>';
+                partnerB.innerHTML = '<option value="">-- Select Partner (Team B) --</option>';
+                const players = (this.club && this.club.players) ? this.club.players.slice() : [];
+                players.forEach(p => {
+                    const esc = p.replace(/"/g, '&quot;');
+                    first.innerHTML += `<option value="${esc}">${p}</option>`;
+                    second.innerHTML += `<option value="${esc}">${p}</option>`;
+                    partnerA.innerHTML += `<option value="${esc}">${p}</option>`;
+                    partnerB.innerHTML += `<option value="${esc}">${p}</option>`;
+                });
+
+                // wire onchange to enforce realtime filtering
+                const refs = [first, partnerA, second, partnerB];
+                refs.forEach(el => {
+                    el.onchange = () => this.populateClubStartFormSelects();
+                });
+                // populate initial filtered rendering
+                this.populateClubStartFormSelects();
+                document.getElementById('club-new-game-form').style.display = 'block';
+                document.getElementById('club-current-game-info').style.display = 'none';
+                document.getElementById('club-hand-entry-card').style.display = 'none';
+                document.getElementById('club-hand-history-card').style.display = 'none';
+            }
+
+            cancelStartClubGame() {
+                document.getElementById('club-new-game-form').style.display = 'none';
+            }
+
+            populateClubStartFormSelects() {
+                // Rebuilds start-form selects and disables options already chosen in other selects
+                const first = document.getElementById('club-first-bidder-select');
+                const second = document.getElementById('club-second-bidder-select');
+                const partnerA = document.getElementById('club-partner-a-select');
+                const partnerB = document.getElementById('club-partner-b-select');
+                if (!first || !second || !partnerA || !partnerB) return;
+
+                const players = (this.club && this.club.players) ? this.club.players.slice() : [];
+                // preserve current selections
+                const cur = {
+                    first: first.value || '',
+                    partnerA: partnerA.value || '',
+                    second: second.value || '',
+                    partnerB: partnerB.value || ''
+                };
+
+                const selects = [
+                    {el:first, key:'first'},
+                    {el:partnerA, key:'partnerA'},
+                    {el:second, key:'second'},
+                    {el:partnerB, key:'partnerB'}
+                ];
+
+                selects.forEach(s => {
+                    const el = s.el;
+                    const key = s.key;
+                    el.innerHTML = '';
+                    const placeholder = {
+                        first: '-- Select First Bidder --',
+                        partnerA: '-- Select Partner (Team A) --',
+                        second: '-- Select Second Bidder --',
+                        partnerB: '-- Select Partner (Team B) --'
+                    }[key] || '-- Select --';
+                    el.innerHTML = `<option value="">${placeholder}</option>`;
+                    players.forEach(p => {
+                        const disabled = Object.values(cur).some((v, i) => v && v === p && (Object.keys(cur)[i] !== key));
+                        const selected = cur[key] === p;
+                        el.innerHTML += `<option value="${p}" ${disabled && !selected ? 'disabled' : ''} ${selected ? 'selected' : ''}>${p}${disabled && !selected ? ' (selected elsewhere)' : ''}</option>`;
+                    });
+                });
+            }
+
+            addPlayerToRosterFromGame() {
+                const inp = document.getElementById('club-add-player-input');
+                if (!inp) return;
+                const name = (inp.value || '').trim();
+                if (!name) { this.showMessage('Enter a name to add', 'error'); return; }
+
+                // Append to textarea and in-memory list
+                const ta = document.getElementById('club-players-input');
+                if (ta) {
+                    const lines = ta.value.split('\n').map(l => l.trim()).filter(l => l);
+                    if (lines.includes(name)) { this.showMessage('Player already in roster', 'warning'); inp.value = ''; return; }
+                    lines.push(name);
+                    ta.value = lines.join('\n');
+                }
+
+                this.club.players = this.club.players || [];
+                if (!this.club.players.includes(name)) this.club.players.push(name);
+
+                // If a roster id exists, update stored roster so selections persist
+                if (this.club && this.club.id) {
+                    try {
+                        const rosters = JSON.parse(localStorage.getItem('clubRosters') || '{}');
+                        if (rosters[this.club.id]) {
+                            rosters[this.club.id].players = this.club.players.slice();
+                            localStorage.setItem('clubRosters', JSON.stringify(rosters));
+                            this.clubRosters = rosters;
+                        }
+                    } catch (e) { console.error('Failed updating stored roster', e); }
+                }
+
+                // refresh selects and counter
+                try { this.updateClubPlayerCounter(); } catch (e) {}
+                try { this.populateClubPlayerSelects(); } catch (e) {}
+                try { this.populateClubStartFormSelects(); } catch (e) {}
+                inp.value = '';
+                this.showMessage(`Added '${name}' to roster`, 'success');
+            }
+
+            confirmStartClubGame() {
+                const first = document.getElementById('club-first-bidder-select').value;
+                const second = document.getElementById('club-second-bidder-select').value;
+                const partnerA = document.getElementById('club-partner-a-select').value;
+                const partnerB = document.getElementById('club-partner-b-select').value;
+                if (!first || !second || !partnerA || !partnerB) { this.showMessage('Please select all four players (both bidders and both partners)', 'error'); return; }
+                // ensure uniqueness
+                const chosen = [first, partnerA, second, partnerB];
+                const uniq = new Set(chosen);
+                if (uniq.size !== 4) { this.showMessage('All four selected players must be unique', 'error'); return; }
+                if (!this.club || !this.club.id) { this.showMessage('Please save or select a roster first', 'error'); return; }
+
+                const rosterId = this.club.id;
+                const seatingOrder = [first, second, partnerA, partnerB];
+
+                const gameId = `club-${rosterId}-${Date.now()}`;
+                const clubGame = {
+                    id: gameId,
+                    rosterId: rosterId,
+                    status: 'in-progress',
+                    startTime: new Date().toISOString(),
+                    hands: [],
+                    marks: { team1: 0, team2: 0 },
+                    dealerIndex: 0,
+                    seatingOrder: seatingOrder
+                };
+
+                // persist into club.games array and localStorage
+                this.club.games = this.club.games || [];
+                this.club.games.push(clubGame);
+                try { localStorage.setItem(`clubGames_${rosterId}`, JSON.stringify(this.club.games)); } catch (e) { console.error('Failed saving club games', e); }
+
+                this.currentClubGame = clubGame;
+
+                // update UI
+                document.getElementById('club-new-game-form').style.display = 'none';
+                document.getElementById('club-game-title').textContent = `${new Date().toLocaleString()}`;
+                document.getElementById('club-team1-name').textContent = seatingOrder[0] + ' & ' + seatingOrder[2];
+                document.getElementById('club-team2-name').textContent = seatingOrder[1] + ' & ' + seatingOrder[3];
+                document.getElementById('club-team1-marks').textContent = '0';
+                document.getElementById('club-team2-marks').textContent = '0';
+
+                document.getElementById('club-current-game-info').style.display = 'block';
+                document.getElementById('club-hand-entry-card').style.display = 'block';
+                document.getElementById('club-hand-history-card').style.display = 'block';
+
+                this.populateClubPlayerSelects();
+                this.updateClubGameDisplay();
+                this.clubCheckForHandStart();
+                this.showMessage('Club game started', 'success');
+            }
+
+            clubCheckForHandStart() {
+                const canStart = this.currentClubGame && 
+                                 this.currentClubGame.status === 'in-progress' &&
+                                 !this.currentClubGame.currentBidding &&
+                                 this.currentClubGame.hands.length < 20;
+
+                const card = document.getElementById('club-hand-entry-card');
+                if (!card) return;
+                let startButton = document.getElementById('club-start-hand-btn');
+                if (canStart) {
+                    if (!startButton) {
+                        startButton = document.createElement('button');
+                        startButton.id = 'club-start-hand-btn';
+                        startButton.className = 'success';
+                        startButton.textContent = 'Start New Hand';
+                        startButton.onclick = () => this.clubStartHandBidding();
+                        startButton.style.marginTop = '15px';
+                        startButton.style.width = '100%';
+                        card.appendChild(startButton);
+                    }
+                    startButton.style.display = 'block';
+                } else if (startButton) {
+                    startButton.style.display = 'none';
+                }
+            }
+
+            clubStartHandBidding() {
+                const dealerIndex = this.currentClubGame.dealerIndex % 4;
+                const order = [
+                    this.currentClubGame.seatingOrder[(dealerIndex + 1) % 4],
+                    this.currentClubGame.seatingOrder[(dealerIndex + 2) % 4],
+                    this.currentClubGame.seatingOrder[(dealerIndex + 3) % 4],
+                    this.currentClubGame.seatingOrder[dealerIndex]
+                ];
+
+                this.currentClubGame.currentBidding = {
+                    order: order,
+                    position: 0,
+                    bids: [],
+                    highestMark: 1,
+                    highestBid: null
+                };
+
+                document.getElementById('club-sequential-bidding-section').style.display = 'block';
+                const startButton = document.getElementById('club-start-hand-btn'); if (startButton) startButton.style.display = 'none';
+                this.clubShowNextBidder();
+            }
+
+            clubShowNextBidder() {
+                if (!this.currentClubGame.currentBidding) return;
+                const currentBidder = this.currentClubGame.currentBidding.order[this.currentClubGame.currentBidding.position];
+                document.getElementById('club-current-bidder-display').innerHTML = `<h3>Current Bidder: ${currentBidder}</h3><p>Position ${this.currentClubGame.currentBidding.position + 1} of 4</p>`;
+                const historyHtml = this.currentClubGame.currentBidding.bids.map(b => `<div><strong>${b.player}</strong>: ${b.bid === 'pass' ? 'Pass' : b.bid}</div>`).join('');
+                document.getElementById('club-bid-history-display').innerHTML = historyHtml || '<div style="color: #999;">No bids yet</div>';
+
+                const highestMark = this.currentClubGame.currentBidding.highestMark;
+                let options = '<option value="pass">Pass</option>';
+                for (let i = 30; i <= 42; i++) options += `<option value="${i}">${i} points</option>`;
+                options += '<option value="84">84 (2 marks)</option>';
+                if (highestMark >= 1) options += '<option value="2 marks">2 marks</option>';
+                if (highestMark >= 2) options += '<option value="3 marks">3 marks</option>';
+                if (highestMark >= 3) options += '<option value="4 marks">4 marks</option>';
+                if (highestMark >= 4) options += '<option value="5 marks">5 marks</option>';
+                document.getElementById('club-current-bid-options').innerHTML = `<select id="club-current-bid-select">${options}</select>`;
+            }
+
+            recordCurrentBidClub() {
+                const bidValue = document.getElementById('club-current-bid-select').value;
+                if (!this.isValidBid(bidValue)) { this.showMessage('Invalid bid: Must raise previous bid', 'error'); return; }
+                const currentBidder = this.currentClubGame.currentBidding.order[this.currentClubGame.currentBidding.position];
+                this.currentClubGame.currentBidding.bids.push({ player: currentBidder, bid: bidValue });
+                if (bidValue !== 'pass') {
+                    this.currentClubGame.currentBidding.highestBid = bidValue;
+                    if (bidValue.endsWith('marks')) this.currentClubGame.currentBidding.highestMark = Math.max(this.currentClubGame.currentBidding.highestMark, parseInt(bidValue));
+                    else if (bidValue === '84') this.currentClubGame.currentBidding.highestMark = Math.max(this.currentClubGame.currentBidding.highestMark, 2);
+                }
+                this.currentClubGame.currentBidding.position++;
+                if (this.currentClubGame.currentBidding.position >= 4) this.finalizeBiddingClub(); else this.clubShowNextBidder();
+            }
+
+            finalizeBiddingClub() {
+                const bids = this.currentClubGame.currentBidding.bids;
+                const allPassed = bids.every(b => b.bid === 'pass');
+                if (allPassed) {
+                    const hand = { handNumber: this.currentClubGame.hands.length + 1, bids: bids, winner: null, bidAmount: null, result: 'all-pass', marks: 0, dealer: this.currentClubGame.seatingOrder[this.currentClubGame.dealerIndex % 4], timestamp: new Date().toISOString() };
+                    this.currentClubGame.hands.push(hand);
+                    this.currentClubGame.dealerIndex++;
+                    const msg = document.getElementById('club-all-pass-message'); if (msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 2500); }
+                    this.currentClubGame.currentBidding = null;
+                    // persist
+                    try { localStorage.setItem(`clubGames_${this.club.id}`, JSON.stringify(this.club.games)); } catch (e) {}
+                    this.updateClubGameDisplay();
+                    this.clubCheckForHandStart();
+                    document.getElementById('club-sequential-bidding-section').style.display = 'none';
+                    return;
+                }
+
+                const validBids = bids.filter(b => b.bid !== 'pass');
+                let winningBid = validBids[0];
+                for (let i = 1; i < validBids.length; i++) {
+                    const current = this.parseBidValue(validBids[i].bid);
+                    const highest = this.parseBidValue(winningBid.bid);
+                    if (current.marks > highest.marks || (current.marks === highest.marks && current.points > highest.points)) winningBid = validBids[i];
+                }
+
+                const marks = winningBid.bid.endsWith('marks') ? parseInt(winningBid.bid) : (winningBid.bid === '84' ? 2 : 1);
+                const resultSection = document.getElementById('club-bid-result-section');
+                resultSection.innerHTML = `
+                    <div class="card" style="margin-top:20px;">
+                        <h2>Hand Result - ${winningBid.player} bid ${winningBid.bid}</h2>
+                        <div class="grid-2">
+                            <div>
+                                <label for="club-hand-result">Result:</label>
+                                <select id="club-hand-result"><option value="made">Made</option><option value="set">Set</option></select>
+                            </div>
+                            <div>
+                                <label for="club-hand-marks">Marks to Award:</label>
+                                <input type="number" id="club-hand-marks" min="1" max="5" value="${marks}" readonly>
+                            </div>
+                        </div>
+                        <button onclick="app.completeClubHand('${winningBid.player}', '${winningBid.bid}')" class="success">Complete Hand</button>
+                    </div>
+                `;
+                document.getElementById('club-sequential-bidding-section').style.display = 'none';
+            }
+
+            completeClubHand(winner, bidAmount) {
+                const result = document.getElementById('club-hand-result').value;
+                const marks = parseInt(document.getElementById('club-hand-marks').value);
+                const seating = this.currentClubGame.seatingOrder;
+                const team1Players = [seating[0], seating[2]];
+                const winnerTeamIs1 = team1Players.includes(winner);
+                const bidderTeam = winnerTeamIs1 ? 'team1' : 'team2';
+                const opposingTeam = winnerTeamIs1 ? 'team2' : 'team1';
+
+                const hand = { handNumber: this.currentClubGame.hands.length + 1, bids: this.currentClubGame.currentBidding.bids, winner: winner, bidAmount: bidAmount, result: result, marks: marks, dealer: this.currentClubGame.seatingOrder[this.currentClubGame.dealerIndex % 4], timestamp: new Date().toISOString() };
+                this.currentClubGame.hands.push(hand);
+
+                if (result === 'made') this.currentClubGame.marks[bidderTeam] += marks; else this.currentClubGame.marks[opposingTeam] += marks;
+
+                this.currentClubGame.dealerIndex++;
+                this.currentClubGame.currentBidding = null;
+                document.getElementById('club-bid-result-section').innerHTML = '';
+
+                // persist
+                try { localStorage.setItem(`clubGames_${this.club.id}`, JSON.stringify(this.club.games)); } catch (e) { console.error('Failed saving club games', e); }
+
+                this.updateClubGameDisplay();
+                this.clubCheckForHandStart();
+            }
+
+            updateClubGameDisplay() {
+                if (!this.currentClubGame) return;
+                document.getElementById('club-team1-marks').textContent = this.currentClubGame.marks.team1;
+                document.getElementById('club-team2-marks').textContent = this.currentClubGame.marks.team2;
+                const dealer = this.currentClubGame.seatingOrder[this.currentClubGame.dealerIndex % 4];
+                document.getElementById('club-next-dealer').textContent = dealer || 'Unknown';
+                const firstBidder = this.currentClubGame.seatingOrder[(this.currentClubGame.dealerIndex + 1) % 4];
+                document.getElementById('club-next-bidder').textContent = firstBidder || 'Unknown';
+                document.getElementById('club-hand-number').textContent = this.currentClubGame.hands.length + 1;
+
+                const historyDiv = document.getElementById('club-hand-history');
+                historyDiv.innerHTML = this.currentClubGame.hands.map((hand, index) => {
+                    const bidDetails = hand.bids.map(b => `<span class="bid-player">${b.player}: ${b.bid === 'pass' ? 'Pass' : b.bid}</span>`).join('');
+                    let resultText = hand.result === 'all-pass' ? 'All Passed' : `${hand.result === 'made' ? 'Made' : 'Set'} (${hand.marks} mark${hand.marks !== 1 ? 's' : ''})`;
+                    return `
+                        <div class="hand-entry">
+                            <div><strong>${index + 1}</strong></div>
+                            <div class="bid-details">${bidDetails}</div>
+                            <div>${resultText}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            undoLastClubHand() {
+                if (!this.currentClubGame || this.currentClubGame.hands.length === 0) { this.showMessage('No club hands to undo', 'error'); return; }
+                if (!confirm('Are you sure you want to undo the last club hand?')) return;
+                const last = this.currentClubGame.hands.pop();
+                if (last.result !== 'all-pass') {
+                    const seating = this.currentClubGame.seatingOrder;
+                    const team1Players = [seating[0], seating[2]];
+                    const bidderTeamIs1 = team1Players.includes(last.winner);
+                    if (last.result === 'made') {
+                        if (bidderTeamIs1) this.currentClubGame.marks.team1 -= last.marks; else this.currentClubGame.marks.team2 -= last.marks;
+                    } else {
+                        if (bidderTeamIs1) this.currentClubGame.marks.team2 -= last.marks; else this.currentClubGame.marks.team1 -= last.marks;
+                    }
+                }
+                this.currentClubGame.dealerIndex--;
+                this.currentClubGame.currentBidding = null;
+                try { localStorage.setItem(`clubGames_${this.club.id}`, JSON.stringify(this.club.games)); } catch (e) {}
+                this.updateClubGameDisplay();
+                this.clubCheckForHandStart();
+                this.showMessage('Last club hand undone', 'success');
+            }
+
+            cancelClubHand() {
+                if (!confirm('Cancel this club hand? All bids will be discarded.')) return;
+                if (this.currentClubGame) this.currentClubGame.currentBidding = null;
+                document.getElementById('club-sequential-bidding-section').style.display = 'none';
+                document.getElementById('club-bid-result-section').innerHTML = '';
+                this.clubCheckForHandStart();
+                this.updateClubGameDisplay();
             }
 
             displaySchedule() {
