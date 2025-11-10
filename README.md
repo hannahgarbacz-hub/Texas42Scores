@@ -67,6 +67,25 @@ Club Night (Roster & Games)
  - Management: the roster selector has `Rename` and `Delete` controls to rename a saved roster (name uniqueness is enforced) or delete a roster and its saved club games from localStorage.
  - Integration note: club games are stored separately from the tournament model by default. If you want club games to contribute to tournament/team/player statistics, I can add an import or automatic merge step.
 
+Club gameplay (live play)
+ - Dedicated view: Club Night now has a dedicated view (`#club`) separate from `#stats` so club controls and game play are grouped together.
+ - Start Club Game: Instead of a static "Record Club Game" form, you can start an interactive Club Game using the "Start Club Game" button. This opens a start form where you explicitly select:
+   - `#club-first-bidder-select` — First bidder (Team A position 1)
+   - `#club-partner-a-select` — Partner for Team A (position 2)
+   - `#club-second-bidder-select` — Second bidder (Team B position 1)
+   - `#club-partner-b-select` — Partner for Team B (position 2)
+ - Real-time filtering: the four selects are wired for real-time filtering — once you pick a player they become disabled in the other selects to prevent duplicates.
+ - Add player inline: you can add a new roster player directly from the Start Club Game form using the "Add" input; it appends to the roster textarea, updates the in-memory roster and (if the roster is saved) persists the change to localStorage so the new name is immediately selectable.
+ - Club game play UI: Once a club game is started an in-view game UI appears that mirrors the tournament bidding flow. Key IDs and areas include:
+   - `#club-new-game-form` — start form
+   - `#club-current-game-info` — shows current club game header, team names and marks
+   - `#club-hand-entry-card` — bidding UI with dynamically inserted Start New Hand button (`#club-start-hand-btn`)
+   - `#club-current-bidder-display`, `#club-bid-history-display`, `#club-current-bid-options` — bidding controls
+   - `#club-bid-result-section` — choose Made/Set and complete a hand
+   - `#club-hand-history-card` / `#club-hand-history` — per-game hand history plus Undo/Complete controls
+ - Persistence: club games are saved per-roster under the key `clubGames_<rosterId>` in localStorage. Each saved club game includes seating order, dealerIndex, marks, hands, and timestamps so you can resume or inspect games later.
+
+
 # Texas 42 Tournament Scorer — index.html
 
 This README documents the single-file SPA in `index.html`. It covers the UI views, element IDs/classes the JavaScript API (`TournamentScorer`), data shapes, and the recent features added: deterministic round-robin scheduling (single/double), an explicit rounds confirmation dialog, and per-player statistics.
