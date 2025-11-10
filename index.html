@@ -1,0 +1,2386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas 42 Tournament Scorer</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --secondary: #95a5a6;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --focus: #3498db;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            padding-bottom: 80px; /* Added to prevent content overlap with fixed buttons */
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        h1 {
+            color: var(--dark);
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        input, select, button, textarea {
+            font-size: 16px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin: 5px 0;
+            width: 100%;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--focus);
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.08);
+        }
+
+        .hand-entry.header {
+            font-weight: bold;
+            background: var(--light);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .bid-details {
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+
+        .bid-details .bid-player {
+            display: block;
+            margin: 2px 0;
+        }
+
+        .bid-details .bid-player.winner {
+            font-weight: bold;
+            color: var(--success);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-card.warning {
+            background: var(--warning);
+        }
+
+        .stat-card.danger {
+            background: var(--danger);
+        }
+
+        .leaderboard-entry {
+            display: grid;
+            grid-template-columns: 40px 2fr 1fr 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+
+        .leaderboard-entry.header {
+            font-weight: bold;
+            background: var(--dark);
+            color: white;
+        }
+
+        .game-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-in-progress {
+            background: var(--warning);
+            color: white;
+        }
+
+        .status-completed {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-scheduled {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .nav-bar {
+            background: var(--dark);
+            padding: 10px 0;
+            margin-bottom: 20px;
+        }
+
+        .nav-bar button {
+            margin: 0 5px;
+            width: auto;
+            padding: 10px 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .bidding-player-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .bidding-player-row label {
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .all-pass-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .current-bidder {
+            background: #d4edda;
+            border: 2px solid var(--success);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .bid-history {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        .bid-history div {
+            margin: 5px 0;
+        }
+
+        .setup-instructions {
+            background: #e8f4f8;
+            padding: 15px;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        /* FIXED: Button container to prevent overlap */
+        .action-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-buttons button {
+            width: auto;
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .export-btn {
+            background: var(--success);
+        }
+
+        .export-btn:hover {
+            background: #229954;
+        }
+
+        .clear-btn {
+            background: var(--danger);
+            font-size: 0.8em;
+        }
+
+        .clear-btn:hover {
+            background: #c0392b;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 8px;
+            }
+            
+            .action-buttons button {
+                font-size: 0.9em;
+                padding: 10px 16px;
+            }
+
+            .leaderboard-entry {
+                grid-template-columns: 40px 1fr 1fr;
+                font-size: 0.9em;
+            }
+            
+            .hand-entry {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            
+            .bidding-player-row {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-bar button {
+                padding: 8px 12px;
+                margin: 2px;
+            }
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .bye-indicator {
+            background: #f39c12;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <div class="container" style="margin: 0 auto;">
+            <button onclick="app.showView('setup')" id="nav-setup">Setup</button>
+            <button onclick="app.showView('leaderboard')" id="nav-leaderboard">Leaderboard</button>
+            <button onclick="app.showView('table')" id="nav-table">Table Scorekeeper</button>
+            <button onclick="app.showView('schedule')" id="nav-schedule">Schedule</button>
+                    <button onclick="app.showView('stats')" id="nav-stats">Stats</button>
+                    <button onclick="app.showView('club')" id="nav-club">Club Night</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Setup View -->
+        <div id="setup" class="view active">
+            <h1>Tournament Setup</h1>
+            <div class="card">
+                <div class="setup-instructions">
+                    <strong>Instructions:</strong> Enter team names below (one per line). Each team should have two player names separated by " & " or "and". Example: "John & Mary" or "Bob and Sue"
+                    <br><br>
+                    <strong>Note:</strong> If you enter an odd number of teams, a "BYE" team will be automatically created.
+                </div>
+                <label for="team-input">Team Names (one per line):</label>
+                <textarea id="team-input" placeholder="John & Mary&#10;Bob and Sue&#10;Alice & Charlie"></textarea>
+                
+                <label for="num-rounds">Number of Rounds (5-15):</label>
+                <input type="number" id="num-rounds" min="5" max="15" value="10">
+                <label for="tournament-name">Tournament Name (optional):</label>
+                <input type="text" id="tournament-name" placeholder="My Tournament">
+                <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+                    <button onclick="app.saveTournament()" class="success">Save Tournament</button>
+                    <select id="saved-tournaments-select" onchange="app.loadTournament()">
+                        <option value="">-- Load saved tournament --</option>
+                    </select>
+                    <button id="saved-tournament-rename-btn" class="secondary" onclick="app.renameSavedTournament()" title="Rename selected saved tournament">Rename</button>
+                    <button id="saved-tournament-delete-btn" class="danger" onclick="app.deleteSavedTournament()" title="Delete selected saved tournament">Delete</button>
+                    <button id="saved-tournament-export-btn" class="export-btn success" onclick="app.exportSavedTournament()" title="Export selected saved tournament">Export</button>
+                    <button id="saved-tournament-import-btn" class="secondary" onclick="app.importSavedTournament()" title="Import saved tournament from JSON">Import</button>
+                </div>
+                <label for="round-robin-type">Round-Robin Type:</label>
+                <select id="round-robin-type">
+                    <option value="single">Single Round-Robin (each pair once)</option>
+                    <option value="double">Double Round-Robin (each pair twice)</option>
+                </select>
+                
+                <button onclick="app.initializeTournament()" class="success">Initialize Tournament</button>
+            </div>
+        </div>
+
+        <!-- Leaderboard View -->
+        <div id="leaderboard" class="view">
+            <h1>Tournament Leaderboard</h1>
+            <div class="card">
+                <div class="leaderboard-entry header">
+                    <div>Rank</div>
+                    <div>Team (Players)</div>
+                    <div>W-L</div>
+                    <div>Marks Won</div>
+                    <div>Marks Lost</div>
+                    <div>Diff</div>
+                    <div>Games Played</div>
+                </div>
+                <div id="leaderboard-content"></div>
+            </div>
+        </div>
+
+        <!-- Schedule View -->
+        <div id="schedule" class="view">
+            <h1>Round Schedule</h1>
+            <div class="card">
+                <label for="round-select">Select Round:</label>
+                <select id="round-select" onchange="app.displaySchedule()">
+                    <option value="">-- Select a round --</option>
+                </select>
+                <div id="schedule-content"></div>
+            </div>
+        </div>
+
+        <!-- Table Scorekeeper View -->
+        <div id="table" class="view">
+            <h1>Table Scorekeeper</h1>
+            <div class="grid">
+                <div class="card">
+                    <h2>Select Game</h2>
+                    <label for="game-select">Choose Active Game:</label>
+                    <select id="game-select" onchange="app.loadGame()">
+                        <option value="">-- Select a game --</option>
+                    </select>
+                    <button onclick="app.showNewGameForm()" class="success">Start New Game</button>
+                </div>
+
+                <!-- NEW GAME FORM -->
+                <div class="card" id="new-game-form" style="display: none;">
+                    <h2>Start New Game</h2>
+                    <div class="setup-instructions">
+                        <strong>Bidding Order:</strong> Players sit alternating teams (A, B, A, B). Select the first two bidders to set the seating arrangement.
+                    </div>
+                    <div class="grid-2">
+                        <div>
+                            <label for="first-bidder-select-new">First Bidder (Team A Position 1):</label>
+                            <select id="first-bidder-select-new"></select>
+                        </div>
+                        <div>
+                            <label for="second-bidder-select-new">Second Bidder (Team B Position 1):</label>
+                            <select id="second-bidder-select-new"></select>
+                        </div>
+                        <div>
+                            <label for="new-game-round">Round Number:</label>
+                            <input type="number" id="new-game-round" min="1" max="15">
+                        </div>
+                        <div>
+                            <label for="new-game-table">Table Number:</label>
+                            <input type="number" id="new-game-table" min="1">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="app.confirmStartGame()" class="success" style="flex: 1;">Confirm Start Game</button>
+                        <button onclick="app.cancelStartGame()" class="secondary" style="flex: 1;">Cancel</button>
+                    </div>
+                </div>
+
+                <div class="card" id="current-game-info" style="display: none;">
+                    <h2>Current Game: <span id="game-title"></span></h2>
+                    <div class="grid-2">
+                        <div class="stat-card">
+                            <h3 id="team1-name">Team 1</h3>
+                            <p>Marks: <strong id="team1-marks">0</strong></p>
+                            <p id="team1-status">Playing</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3 id="team2-name">Team 2</h3>
+                            <p>Marks: <strong id="team2-marks">0</strong></p>
+                            <p id="team2-status">Playing</p>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px;">Next Dealer: <strong id="next-dealer"></strong></p>
+                    <p>Next Bid Position: <strong id="next-bidder"></strong></p>
+                </div>
+            </div>
+
+            <!-- BIDDING INTERFACE -->
+            <div class="card" id="hand-entry-card" style="display: none;">
+                <h2>Record Bids for Hand #<span id="hand-number"></span></h2>
+                <p style="margin-bottom: 10px; font-size: 0.9em; color: #666;">Bidding starts automatically with player to dealer's left</p>
+                
+                <!-- Sequential Bidding -->
+                <div id="sequential-bidding-section" style="display: none;">
+                    <div class="current-bidder" id="current-bidder-display">
+                        <!-- Current bidder info -->
+                    </div>
+                    <div class="bid-history" id="bid-history-display">
+                        <!-- Previous bids -->
+                    </div>
+                    <div id="current-bid-options">
+                        <!-- Bid dropdown -->
+                    </div>
+                    <button onclick="app.recordCurrentBid()" class="success">Record Bid</button>
+                    <button onclick="app.cancelHand()" class="danger" style="margin-top: 10px;">Cancel Hand</button>
+                </div>
+
+                <div id="all-pass-message" class="all-pass-message hidden">
+                    <strong>All players passed!</strong> Dealer will rotate and no marks will be awarded for this hand.
+                </div>
+                
+                <!-- Start Hand Button will be inserted here by JavaScript -->
+            </div>
+
+            <!-- BID RESULT SECTION -->
+            <div id="bid-result-section"></div>
+
+            <div class="card" id="hand-history-card" style="display: none;">
+                <h2>Hand History</h2>
+                <div class="hand-entry header">
+                    <div>Hand #</div>
+                    <div>Bid Details</div>
+                    <div>Result</div>
+                </div>
+                <div id="hand-history"></div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="app.completeGame()" class="success" style="flex: 1;">Complete Game</button>
+                    <button onclick="app.undoLastHand()" class="danger" style="flex: 1;">Undo Last Hand</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats View -->
+        <div id="stats" class="view">
+            <h1>Statistical Analysis</h1>
+            <div class="card">
+                <h2>Anomaly Detection</h2>
+                <p style="margin-bottom: 15px;">Flagged patterns that may indicate unusual bidding behavior:</p>
+                <div id="anomaly-content"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Team Statistics</h2>
+                <label for="stats-team-select">Select Team:</label>
+                <select id="stats-team-select" onchange="app.displayTeamStats()">
+                    <option value="">-- Select a team --</option>
+                </select>
+                <div id="team-stats-content"></div>
+            </div>
+
+            <div class="card">
+                <h2>Individual Statistics</h2>
+                <label for="stats-player-select">Select Player:</label>
+                <select id="stats-player-select" onchange="app.displayPlayerStats()">
+                    <option value="">-- Select a player --</option>
+                </select>
+                <div id="player-stats-content"></div>
+            </div>
+
+            <!-- Club Night Section -->
+            <div class="card">
+                <h2>Club Night (Roster)</h2>
+                <label for="club-name">Club Name (optional):</label>
+                <input type="text" id="club-name" placeholder="My Local Club">
+                <label for="club-players-input">Players (one per line, up to 25):</label>
+                <textarea id="club-players-input" oninput="app.updateClubPlayerCounter()" placeholder="Alice\nBob\nCarol\nDave\n(Up to 25 players)"></textarea>
+                <div id="club-player-count" style="font-size:0.9em;color:#666;margin-top:6px;">0 / 25 players</div>
+                <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
+                    <label style="display:flex; align-items:center;"><input type="checkbox" id="club-permanent"> Save as permanent roster</label>
+                    <button id="save-club-roster-btn" onclick="app.saveClubRoster()" class="success">Save Roster</button>
+                </div>
+
+                <label for="club-roster-select" style="margin-top:10px; display:block;">Load saved roster:</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <select id="club-roster-select" onchange="app.selectClubRoster()" style="flex:1;">
+                        <option value="">-- Select roster --</option>
+                    </select>
+                    <button id="club-rename-btn" class="secondary" onclick="app.renameClubRoster()" title="Rename selected roster">Rename</button>
+                    <button id="club-delete-btn" class="danger" onclick="app.deleteClubRoster()" title="Delete selected roster">Delete</button>
+                    <button id="club-export-btn" class="export-btn success" onclick="app.exportClubRoster()" title="Export selected roster">Export</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Record Club Game</h2>
+                <div class="grid-2">
+                    <div>
+                        <label>Team 1 - Player A:</label>
+                        <select id="club-team1-p1"></select>
+                        <label>Team 1 - Player B:</label>
+                        <select id="club-team1-p2"></select>
+                    </div>
+                    <div>
+                        <label>Team 2 - Player A:</label>
+                        <select id="club-team2-p1"></select>
+                        <label>Team 2 - Player B:</label>
+                        <select id="club-team2-p2"></select>
+                    </div>
+                </div>
+                <div class="grid-2" style="margin-top:10px;">
+                    <div>
+                        <label for="club-team1-marks">Team 1 Marks:</label>
+                        <input type="number" id="club-team1-marks" min="0" value="0">
+                    </div>
+                    <div>
+                        <label for="club-team2-marks">Team 2 Marks:</label>
+                        <input type="number" id="club-team2-marks" min="0" value="0">
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button onclick="app.recordClubGame()" class="success">Record Club Game</button>
+                    <button onclick="app.clearClubData()" class="danger">Clear Club Games</button>
+                </div>
+                <h3 style="margin-top:15px;">Club Game History</h3>
+                <div id="club-games" class="hand-history"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIXED: Button container to prevent overlap -->
+    <div class="action-buttons">
+        <button onclick="app.clearTournament()" class="clear-btn danger">Clear All Data</button>
+        <button onclick="app.exportCSV()" class="export-btn success">Export to CSV</button>
+    </div>
+
+    <script>
+        // Tournament Scorer Application Class
+        class TournamentScorer {
+            constructor() {
+                this.tournament = null;
+                this.currentGame = null;
+                // Club night state: current roster and saved rosters
+                this.club = { name: null, players: [], games: [] };
+                this.clubRosters = {}; // saved rosters persisted to localStorage
+                this.maxClubPlayers = 25; // maximum allowed players per club roster
+                this.subscribers = [];
+                this.saveTimeout = null;
+                this.version = '1.0';
+            }
+
+            subscribe(callback) {
+                this.subscribers.push(callback);
+            }
+
+            notify() {
+                this.subscribers.forEach(callback => callback(this));
+            }
+
+            showView(viewId) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(viewId).classList.add('active');
+                
+                // Auto-focus first input
+                const focusEl = document.querySelector(`#${viewId} input, #${viewId} textarea, #${viewId} select`);
+                if (focusEl) focusEl.focus();
+            }
+
+            showMessage(message, type = 'success') {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `alert alert-${type}`;
+                messageDiv.textContent = message;
+                document.querySelector('.container').insertBefore(messageDiv, document.querySelector('.container').firstChild);
+                setTimeout(() => messageDiv.remove(), 3000);
+            }
+
+            initializeTournament() {
+                const teamInput = document.getElementById('team-input').value.trim();
+                const numRounds = parseInt(document.getElementById('num-rounds').value);
+                
+                if (!teamInput) {
+                    this.showMessage('Please enter at least one team name', 'error');
+                    return;
+                }
+                
+                const teams = teamInput.split('\n').filter(line => line.trim());
+                
+                if (teams.length < 2) {
+                    this.showMessage('Please enter at least 2 teams', 'error');
+                    return;
+                }
+                
+                if (numRounds < 5 || numRounds > 15) {
+                    this.showMessage('Number of rounds must be between 5 and 15', 'error');
+                    return;
+                }
+
+                let parsedTeams = teams.map((name, index) => ({
+                    id: `team-${index}`,
+                    name: name.trim(),
+                    players: this.parsePlayers(name.trim()),
+                    wins: 0,
+                    losses: 0,
+                    totalMarks: 0,
+                    games: [],
+                    stats: {
+                        totalBids: 0,
+                        successfulBids: 0,
+                        totalMarksBid: 0,
+                        handsPlayed: 0
+                    }
+                }));
+
+                // Add BYE team if odd number of teams
+                let byeTeam = null;
+                if (parsedTeams.length % 2 !== 0) {
+                    byeTeam = {
+                        id: 'team-bye',
+                        name: 'BYE',
+                        players: ['BYE', ''],
+                        wins: 0,
+                        losses: 0,
+                        totalMarks: 0,
+                        games: [],
+                        stats: {
+                            totalBids: 0,
+                            successfulBids: 0,
+                            totalMarksBid: 0,
+                            handsPlayed: 0
+                        },
+                        isBye: true
+                    };
+                    parsedTeams.push(byeTeam);
+                    this.showMessage(`Added BYE team. ${parsedTeams.length - 1} real teams will play.`, 'warning');
+                }
+
+                // Determine single vs double round-robin preference
+                const rrTypeEl = document.getElementById('round-robin-type');
+                const doubleRR = rrTypeEl && rrTypeEl.value === 'double';
+
+                // Ensure schedule is a proper round-robin with no repeat matchups beyond the
+                // chosen mode. For N teams (after BYE added if needed):
+                //  - single round-robin unique rounds = N - 1
+                //  - double round-robin unique rounds = 2 * (N - 1)
+                const maxRounds = (parsedTeams.length - 1) * (doubleRR ? 2 : 1);
+
+                if (numRounds > maxRounds) {
+                    // Prompt user to accept the suggested cap or cancel initialization
+                    const msg = `Requested ${numRounds} rounds would require repeat matchups. Suggest ${maxRounds} rounds (${doubleRR ? 'double' : 'single'} round-robin). Accept suggested number?`;
+                    const accept = confirm(msg);
+                    if (accept) {
+                        numRounds = maxRounds;
+                        try { document.getElementById('num-rounds').value = numRounds; } catch (e) {}
+                        this.showMessage(`Using ${numRounds} rounds (${doubleRR ? 'double' : 'single'} round-robin).`, 'warning');
+                    } else {
+                        // User declined — stop initialization so they can change settings
+                        this.showMessage('Initialization cancelled. Please adjust number of rounds or round-robin type.', 'warning');
+                        return;
+                    }
+                }
+
+                const schedule = this.generateRoundRobin(parsedTeams, numRounds, doubleRR);
+                
+                this.tournament = {
+                    teams: parsedTeams,
+                    schedule: schedule,
+                    games: {},
+                    numRounds: numRounds,
+                    startTime: new Date().toISOString(),
+                    id: this.generateTournamentId(),
+                    version: this.version
+                };
+
+                // Auto-complete BYE games with 7-6 result
+                if (byeTeam) {
+                    Object.values(this.tournament.schedule).forEach(roundGames => {
+                        roundGames.forEach(game => {
+                            if (game.team1 === 'team-bye' || game.team2 === 'team-bye') {
+                                const realTeamId = game.team1 === 'team-bye' ? game.team2 : game.team1;
+                                const realTeam = this.tournament.teams.find(t => t.id === realTeamId);
+                                
+                                this.tournament.games[game.gameId] = {
+                                    id: game.gameId,
+                                    team1: game.team1,
+                                    team2: game.team2,
+                                    round: game.round,
+                                    table: game.table,
+                                    status: 'completed',
+                                    startTime: new Date().toISOString(),
+                                    endTime: new Date().toISOString(),
+                                    winner: realTeamId,
+                                    marks: { [realTeamId]: 7, ['team-bye']: 6 },
+                                    hands: [],
+                                    isByeGame: true,
+                                    dealerIndex: 0
+                                };
+                                
+                                realTeam.wins++;
+                                realTeam.totalMarks += 7;
+                                game.status = 'completed';
+                                game.winner = realTeamId;
+                            }
+                        });
+                    });
+                }
+
+                this.save();
+                this.notify();
+                this.showView('leaderboard');
+                this.showMessage('Tournament initialized successfully!', 'success');
+            }
+
+            parsePlayers(teamName) {
+                const match = teamName.match(/(.+?)\s*(?:&|and)\s*(.+)/i);
+                if (match) {
+                    return [match[1].trim(), match[2].trim()];
+                }
+                return [teamName, ''];
+            }
+
+            generateRoundRobin(teams, numRounds, double = false) {
+                // Implements the circle method for round-robin scheduling.
+                // Produces unique matchups for up to (n - 1) rounds for single,
+                // or up to 2*(n - 1) for double round-robin (each pairing twice).
+                const schedule = {};
+                const n = teams.length;
+
+                if (n % 2 !== 0) {
+                    // Shouldn't happen because initializeTournament adds a BYE when odd.
+                    console.warn('generateRoundRobin: odd number of teams detected');
+                }
+
+                const baseRounds = n - 1;
+                const maxRounds = baseRounds * (double ? 2 : 1);
+                const roundsToGenerate = Math.min(numRounds, maxRounds);
+
+                // Build base (single) round-robin schedule using the circle method
+                const ids = teams.map(t => t.id);
+                const baseSchedule = [];
+
+                // We'll copy the ids array for rotation purposes
+                const rot = [...ids];
+
+                for (let r = 0; r < baseRounds; r++) {
+                    const roundGames = [];
+                    for (let i = 0; i < n / 2; i++) {
+                        const teamA = rot[i];
+                        const teamB = rot[n - 1 - i];
+                        roundGames.push({ team1: teamA, team2: teamB });
+                    }
+
+                    baseSchedule.push(roundGames);
+
+                    // rotate (keep first element fixed)
+                    const last = rot.pop();
+                    rot.splice(1, 0, last);
+                }
+
+                // Now assemble the final schedule up to roundsToGenerate
+                for (let r = 0; r < roundsToGenerate; r++) {
+                    schedule[r + 1] = [];
+                    if (r < baseRounds) {
+                        // use base schedule
+                        baseSchedule[r].forEach((g, i) => {
+                            schedule[r + 1].push({
+                                gameId: `game-${r + 1}-${i + 1}`,
+                                team1: g.team1,
+                                team2: g.team2,
+                                status: 'scheduled',
+                                table: i + 1,
+                                round: r + 1
+                            });
+                        });
+                    } else {
+                        // double-round: mirror base schedule with swapped home/away
+                        const mirrorIndex = r - baseRounds;
+                        const src = baseSchedule[mirrorIndex % baseRounds];
+                        src.forEach((g, i) => {
+                            schedule[r + 1].push({
+                                gameId: `game-${r + 1}-${i + 1}`,
+                                team1: g.team2,
+                                team2: g.team1,
+                                status: 'scheduled',
+                                table: i + 1,
+                                round: r + 1
+                            });
+                        });
+                    }
+                }
+
+                return schedule;
+            }
+
+            generateTournamentId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            showNewGameForm() {
+                if (!this.tournament) {
+                    this.showMessage('Please initialize tournament first', 'error');
+                    return;
+                }
+                
+                const firstSelect = document.getElementById('first-bidder-select-new');
+                firstSelect.innerHTML = '<option value="">-- Select First Bidder --</option>';
+                
+                const allPlayers = [];
+                this.tournament.teams.forEach(team => {
+                    if (!team.isBye) {
+                        team.players.forEach(player => {
+                            if (player) allPlayers.push({player, team: team.id, teamName: team.name});
+                        });
+                    }
+                });
+                
+                allPlayers.forEach(p => {
+                    firstSelect.innerHTML += `<option value="${p.player}|${p.team}">${p.player} (${p.teamName})</option>`;
+                });
+                
+                firstSelect.onchange = () => {
+                    const selected = firstSelect.value;
+                    const secondSelect = document.getElementById('second-bidder-select-new');
+                    secondSelect.innerHTML = '<option value="">-- Select Second Bidder --</option>';
+                    
+                    if (selected) {
+                        const [firstPlayer, firstTeam] = selected.split('|');
+                        allPlayers.forEach(p => {
+                            if (p.team !== firstTeam) {
+                                secondSelect.innerHTML += `<option value="${p.player}|${p.team}">${p.player} (${p.teamName})</option>`;
+                            }
+                        });
+                    }
+                };
+                
+                document.getElementById('new-game-round').value = '';
+                document.getElementById('new-game-table').value = '';
+                
+                document.getElementById('new-game-form').style.display = 'block';
+                document.getElementById('current-game-info').style.display = 'none';
+                document.getElementById('hand-entry-card').style.display = 'none';
+                document.getElementById('hand-history-card').style.display = 'none';
+            }
+
+            confirmStartGame() {
+                const firstBidder = document.getElementById('first-bidder-select-new').value;
+                const secondBidder = document.getElementById('second-bidder-select-new').value;
+                const round = document.getElementById('new-game-round').value;
+                const table = document.getElementById('new-game-table').value;
+                
+                if (!firstBidder || !secondBidder || !round || !table) {
+                    this.showMessage('Please fill in all fields', 'error');
+                    return;
+                }
+                
+                const [firstPlayer, firstTeam] = firstBidder.split('|');
+                const [secondPlayer, secondTeam] = secondBidder.split('|');
+                
+                if (firstTeam === secondTeam) {
+                    this.showMessage('First and second bidders must be from different teams', 'error');
+                    return;
+                }
+                
+                const roundNum = parseInt(round);
+                const tableNum = parseInt(table);
+                
+                if (roundNum < 1 || roundNum > this.tournament.numRounds) {
+                    this.showMessage(`Round must be between 1 and ${this.tournament.numRounds}`, 'error');
+                    return;
+                }
+                
+                const gameId = `game-${round}-${table}-${Date.now()}`;
+                const team1Obj = this.tournament.teams.find(t => t.id === firstTeam);
+                const team2Obj = this.tournament.teams.find(t => t.id === secondTeam);
+                
+                // Check if either team is BYE
+                if (team1Obj.isBye || team2Obj.isBye) {
+                    this.showMessage('Cannot start a game with the BYE team. BYE games are auto-completed.', 'error');
+                    return;
+                }
+                
+                // FIXED: Establish fixed seating order (dealer will rotate within this order)
+                const seatingOrder = [
+                    firstPlayer, // Position 0: Team A, Player 1 (initial dealer)
+                    secondPlayer, // Position 1: Team B, Player 1
+                    team1Obj.players.find(p => p !== firstPlayer), // Position 2: Team A, Player 2
+                    team2Obj.players.find(p => p !== secondPlayer) // Position 3: Team B, Player 2
+                ];
+                
+                this.currentGame = {
+                    id: gameId,
+                    team1: firstTeam,
+                    team2: secondTeam,
+                    round: roundNum,
+                    table: tableNum,
+                    status: 'in-progress',
+                    startTime: new Date().toISOString(),
+                    hands: [],
+                    marks: {
+                        [firstTeam]: 0,
+                        [secondTeam]: 0
+                    },
+                    dealerIndex: 0, // Tracks which position (0-3) is dealer
+                    seatingOrder: seatingOrder // FIXED: Fixed order for entire game
+                };
+                
+                this.tournament.games[gameId] = this.currentGame;
+                this.save();
+                this.notify();
+                
+                document.getElementById('new-game-form').style.display = 'none';
+                document.getElementById('game-select').value = gameId;
+                this.loadGame();
+                this.showMessage('Game started successfully!', 'success');
+            }
+
+            cancelStartGame() {
+                document.getElementById('new-game-form').style.display = 'none';
+            }
+
+            loadGame() {
+                const select = document.getElementById('game-select');
+                const gameId = select.value;
+                
+                if (!gameId) return;
+                
+                this.currentGame = this.tournament.games[gameId];
+                
+                // Check if this is a BYE game
+                if (this.currentGame.isByeGame) {
+                    this.showMessage('This is a BYE game and is already completed', 'info');
+                    document.getElementById('current-game-info').style.display = 'none';
+                    document.getElementById('hand-entry-card').style.display = 'none';
+                    document.getElementById('hand-history-card').style.display = 'none';
+                    return;
+                }
+                
+                // Reset any stale bidding state
+                this.currentGame.currentBidding = null;
+                
+                document.getElementById('current-game-info').style.display = 'block';
+                document.getElementById('hand-entry-card').style.display = 'block';
+                document.getElementById('hand-history-card').style.display = 'block';
+                
+                const team1 = this.tournament.teams.find(t => t.id === this.currentGame.team1);
+                const team2 = this.tournament.teams.find(t => t.id === this.currentGame.team2);
+                
+                document.getElementById('game-title').textContent = `Round ${this.currentGame.round}, Table ${this.currentGame.table}`;
+                document.getElementById('team1-name').textContent = team1.name;
+                document.getElementById('team2-name').textContent = team2.name;
+                
+                this.updateGameDisplay();
+                this.checkForHandStart(); // Check if we can start a new hand
+            }
+
+            checkForHandStart() {
+                const canStart = this.currentGame && 
+                                this.currentGame.status === 'in-progress' && 
+                                !this.currentGame.currentBidding &&
+                                this.currentGame.hands.length < 20;
+                
+                const handEntryCard = document.getElementById('hand-entry-card');
+                let startButton = document.getElementById('start-hand-btn');
+                
+                if (canStart) {
+                    if (!startButton) {
+                        startButton = document.createElement('button');
+                        startButton.id = 'start-hand-btn';
+                        startButton.className = 'success';
+                        startButton.textContent = 'Start New Hand';
+                        startButton.onclick = () => this.startHandBidding();
+                        startButton.style.marginTop = '15px';
+                        startButton.style.width = '100%';
+                        handEntryCard.appendChild(startButton);
+                    }
+                    startButton.style.display = 'block';
+                } else if (startButton) {
+                    startButton.style.display = 'none';
+                }
+            }
+
+            startHandBidding() {
+                const dealerIndex = this.currentGame.dealerIndex % 4;
+                const order = [
+                    this.currentGame.seatingOrder[(dealerIndex + 1) % 4],
+                    this.currentGame.seatingOrder[(dealerIndex + 2) % 4],
+                    this.currentGame.seatingOrder[(dealerIndex + 3) % 4],
+                    this.currentGame.seatingOrder[dealerIndex]
+                ];
+                
+                this.currentGame.currentBidding = {
+                    order: order,
+                    position: 0,
+                    bids: [],
+                    highestMark: 1,
+                    highestBid: null,
+                    winner: null,
+                    winningBid: null
+                };
+                
+                document.getElementById('sequential-bidding-section').style.display = 'block';
+                
+                // Hide start button
+                const startButton = document.getElementById('start-hand-btn');
+                if (startButton) startButton.style.display = 'none';
+                
+                this.showNextBidder();
+            }
+
+            cancelHand() {
+                if (!confirm('Cancel this hand? All bids will be discarded.')) return;
+                
+                this.currentGame.currentBidding = null;
+                document.getElementById('sequential-bidding-section').style.display = 'none';
+                document.getElementById('bid-result-section').innerHTML = '';
+                
+                this.checkForHandStart();
+                this.updateGameDisplay();
+            }
+
+            updateGameDisplay() {
+                if (!this.currentGame) return;
+                
+                const team1Marks = this.currentGame.marks[this.currentGame.team1];
+                const team2Marks = this.currentGame.marks[this.currentGame.team2];
+                
+                document.getElementById('team1-marks').textContent = team1Marks;
+                document.getElementById('team2-marks').textContent = team2Marks;
+                
+                const team1Won = team1Marks >= 7;
+                const team2Won = team2Marks >= 7;
+                
+                document.getElementById('team1-status').textContent = team1Won ? 'WON' : 'Playing';
+                document.getElementById('team2-status').textContent = team2Won ? 'WON' : 'Playing';
+                
+                // FIXED: Use seating order and dealerIndex to calculate positions
+                const dealer = this.currentGame.seatingOrder[this.currentGame.dealerIndex % 4];
+                const firstBidder = this.currentGame.seatingOrder[(this.currentGame.dealerIndex + 1) % 4];
+                
+                document.getElementById('next-dealer').textContent = dealer || 'Unknown';
+                document.getElementById('next-bidder').textContent = firstBidder || 'Unknown';
+                
+                document.getElementById('hand-number').textContent = this.currentGame.hands.length + 1;
+                
+                const historyDiv = document.getElementById('hand-history');
+                historyDiv.innerHTML = this.currentGame.hands.map((hand, index) => {
+                    const bidDetails = hand.bids.map(b => {
+                        const winnerClass = hand.winner && b.player === hand.winner ? 'winner' : '';
+                        return `<span class="bid-player ${winnerClass}">${b.player}: ${b.bid === 'pass' ? 'Pass' : b.bid}</span>`;
+                    }).join('');
+                    
+                    let resultText = '';
+                    if (hand.result === 'all-pass') {
+                        resultText = 'All Passed';
+                    } else {
+                        resultText = `${hand.result === 'made' ? 'Made' : 'Set'} (${hand.marks} mark${hand.marks !== 1 ? 's' : ''})`;
+                    }
+                    
+                    return `
+                        <div class="hand-entry">
+                            <div><strong>${index + 1}</strong></div>
+                            <div class="bid-details">${bidDetails}</div>
+                            <div>${resultText}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            showNextBidder() {
+                if (!this.currentGame.currentBidding) return;
+                
+                const currentBidder = this.currentGame.currentBidding.order[this.currentGame.currentBidding.position];
+                
+                document.getElementById('current-bidder-display').innerHTML = `
+                    <h3>Current Bidder: ${currentBidder}</h3>
+                    <p>Position ${this.currentGame.currentBidding.position + 1} of 4</p>
+                `;
+                
+                const historyHtml = this.currentGame.currentBidding.bids.map(b => 
+                    `<div><strong>${b.player}</strong>: ${b.bid === 'pass' ? 'Pass' : b.bid}</div>`
+                ).join('');
+                document.getElementById('bid-history-display').innerHTML = 
+                    historyHtml || '<div style="color: #999;">No bids yet</div>';
+                
+                const highestMark = this.currentGame.currentBidding.highestMark;
+                let options = '<option value="pass">Pass</option>';
+                
+                for (let i = 30; i <= 42; i++) {
+                    options += `<option value="${i}">${i} points</option>`;
+                }
+                options += '<option value="84">84 (2 marks)</option>';
+                
+                if (highestMark >= 1) options += '<option value="2 marks">2 marks</option>';
+                if (highestMark >= 2) options += '<option value="3 marks">3 marks</option>';
+                if (highestMark >= 3) options += '<option value="4 marks">4 marks</option>';
+                if (highestMark >= 4) options += '<option value="5 marks">5 marks</option>';
+                
+                document.getElementById('current-bid-options').innerHTML = 
+                    `<select id="current-bid-select">${options}</select>`;
+            }
+
+            recordCurrentBid() {
+                const bidValue = document.getElementById('current-bid-select').value;
+                
+                if (!this.isValidBid(bidValue)) {
+                    this.showMessage('Invalid bid: Must raise previous bid', 'error');
+                    return;
+                }
+                
+                const currentBidder = this.currentGame.currentBidding.order[this.currentGame.currentBidding.position];
+                
+                this.currentGame.currentBidding.bids.push({
+                    player: currentBidder,
+                    bid: bidValue
+                });
+                
+                if (bidValue !== 'pass') {
+                    this.currentGame.currentBidding.highestBid = bidValue;
+                    if (bidValue.endsWith('marks')) {
+                        const mark = parseInt(bidValue);
+                        this.currentGame.currentBidding.highestMark = Math.max(this.currentGame.currentBidding.highestMark, mark);
+                    } else if (bidValue === '84') {
+                        this.currentGame.currentBidding.highestMark = Math.max(this.currentGame.currentBidding.highestMark, 2);
+                    }
+                }
+                
+                this.currentGame.currentBidding.position++;
+                
+                if (this.currentGame.currentBidding.position >= 4) {
+                    this.finalizeBidding();
+                } else {
+                    this.showNextBidder();
+                }
+            }
+
+            isValidBid(bidValue) {
+                if (bidValue === 'pass') return true;
+                
+                const currentBid = this.parseBidValue(bidValue);
+                const highestBid = this.currentGame.currentBidding.highestBid ? 
+                    this.parseBidValue(this.currentGame.currentBidding.highestBid) : 
+                    { points: 0, marks: 0 };
+                
+                if (currentBid.marks > 0) {
+                    return currentBid.marks > highestBid.marks;
+                } else {
+                    return currentBid.points > highestBid.points;
+                }
+            }
+
+            parseBidValue(bid) {
+                if (bid === '84') return { points: 84, marks: 2 };
+                if (bid.endsWith('marks')) return { points: 0, marks: parseInt(bid) };
+                return { points: parseInt(bid), marks: 0 };
+            }
+
+            finalizeBidding() {
+                const bids = this.currentGame.currentBidding.bids;
+                const allPassed = bids.every(b => b.bid === 'pass');
+                
+                if (allPassed) {
+                    const hand = {
+                        handNumber: this.currentGame.hands.length + 1,
+                        bids: bids,
+                        winner: null,
+                        bidAmount: null,
+                        result: 'all-pass',
+                        marks: 0,
+                        dealer: this.getCurrentDealer(),
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    this.currentGame.hands.push(hand);
+                    this.currentGame.dealerIndex++;
+                    
+                    const message = document.getElementById('all-pass-message');
+                    message.classList.remove('hidden');
+                    setTimeout(() => message.classList.add('hidden'), 2500);
+                    
+                    this.currentGame.currentBidding = null;
+                    
+                    this.save();
+                    this.updateGameDisplay();
+                    this.checkForHandStart(); // Allow next hand to start
+                    
+                    document.getElementById('sequential-bidding-section').style.display = 'none';
+                    
+                    return;
+                }
+                
+                const validBids = bids.filter(b => b.bid !== 'pass');
+                let winningBid = validBids[0];
+                
+                for (let i = 1; i < validBids.length; i++) {
+                    const current = this.parseBidValue(validBids[i].bid);
+                    const highest = this.parseBidValue(winningBid.bid);
+                    
+                    if (current.marks > highest.marks || 
+                        (current.marks === highest.marks && current.points > highest.points)) {
+                        winningBid = validBids[i];
+                    }
+                }
+                
+                const marks = winningBid.bid.endsWith('marks') ? parseInt(winningBid.bid) : 
+                             (winningBid.bid === '84' ? 2 : 1);
+                
+                const resultSection = document.getElementById('bid-result-section');
+                resultSection.innerHTML = `
+                    <div class="card" style="margin-top: 20px;">
+                        <h2>Hand Result - ${winningBid.player} bid ${winningBid.bid}</h2>
+                        <div class="grid-2">
+                            <div>
+                                <label for="hand-result">Result:</label>
+                                <select id="hand-result">
+                                    <option value="made">Made</option>
+                                    <option value="set">Set</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="hand-marks">Marks to Award:</label>
+                                <input type="number" id="hand-marks" min="1" max="5" value="${marks}" readonly>
+                            </div>
+                        </div>
+                        <button onclick="app.completeHand('${winningBid.player}', '${winningBid.bid}')" class="success">Complete Hand</button>
+                    </div>
+                `;
+                
+                document.getElementById('sequential-bidding-section').style.display = 'none';
+            }
+
+            completeHand(winner, bidAmount) {
+                const result = document.getElementById('hand-result').value;
+                const marks = parseInt(document.getElementById('hand-marks').value);
+                
+                const team1Players = this.tournament.teams.find(t => t.id === this.currentGame.team1).players;
+                const winnerTeam = team1Players.includes(winner) ? this.currentGame.team1 : this.currentGame.team2;
+                const isWinnerTeam1 = team1Players.includes(winner);
+                const opposingTeam = isWinnerTeam1 ? this.currentGame.team2 : this.currentGame.team1;
+                
+                const hand = {
+                    handNumber: this.currentGame.hands.length + 1,
+                    bids: this.currentGame.currentBidding.bids,
+                    winner: winner,
+                    bidAmount: bidAmount,
+                    result: result,
+                    marks: marks,
+                    dealer: this.getCurrentDealer(),
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.currentGame.hands.push(hand);
+                
+                // CORRECTED: When set, opposing team gets the marks
+                if (result === 'made') {
+                    this.currentGame.marks[winnerTeam] += marks;
+                } else {
+                    this.currentGame.marks[opposingTeam] += marks;
+                }
+                
+                const team = this.tournament.teams.find(t => t.id === winnerTeam);
+                team.stats.totalBids++;
+                team.stats.totalMarksBid += marks;
+                if (result === 'made') {
+                    team.stats.successfulBids++;
+                }
+                team.stats.handsPlayed++;
+                
+                this.currentGame.dealerIndex++;
+                this.currentGame.currentBidding = null;
+                
+                document.getElementById('bid-result-section').innerHTML = '';
+                
+                this.save();
+                this.updateGameDisplay();
+                this.checkForHandStart(); // Show button for next hand
+            }
+
+            getCurrentDealer() {
+                return this.currentGame.seatingOrder[this.currentGame.dealerIndex % 4];
+            }
+
+            undoLastHand() {
+                if (!this.currentGame || this.currentGame.hands.length === 0) {
+                    this.showMessage('No hands to undo', 'error');
+                    return;
+                }
+                
+                if (!confirm('Are you sure you want to undo the last hand? This cannot be redone.')) {
+                    return;
+                }
+                
+                const lastHand = this.currentGame.hands.pop();
+                
+                if (lastHand.result !== 'all-pass') {
+                    const team1Players = this.tournament.teams.find(t => t.id === this.currentGame.team1).players;
+                    const bidderTeam = team1Players.includes(lastHand.winner) ? this.currentGame.team1 : this.currentGame.team2;
+                    const isBidderTeam1 = team1Players.includes(lastHand.winner);
+                    const opposingTeam = isBidderTeam1 ? this.currentGame.team2 : this.currentGame.team1;
+
+                    if (lastHand.result === 'made') {
+                        this.currentGame.marks[bidderTeam] -= lastHand.marks;
+                    } else {
+                        // CORRECTED: When undoing a "set", subtract marks from opposing team
+                        this.currentGame.marks[opposingTeam] -= lastHand.marks;
+                    }
+                    
+                    const team = this.tournament.teams.find(t => t.id === bidderTeam);
+                    team.stats.totalBids--;
+                    team.stats.totalMarksBid -= lastHand.marks;
+                    if (lastHand.result === 'made') {
+                        team.stats.successfulBids--;
+                    }
+                    team.stats.handsPlayed--;
+                }
+                
+                this.currentGame.dealerIndex--;
+                this.currentGame.currentBidding = null;
+                
+                this.save();
+                this.updateGameDisplay();
+                this.checkForHandStart(); // Show start button again
+                
+                this.showMessage('Last hand undone', 'success');
+            }
+
+            completeGame() {
+                if (!this.currentGame) return;
+                
+                const team1Marks = this.currentGame.marks[this.currentGame.team1];
+                const team2Marks = this.currentGame.marks[this.currentGame.team2];
+                
+                if (team1Marks < 7 && team2Marks < 7) {
+                    this.showMessage('Game not completed. No team has reached 7 marks.', 'error');
+                    return;
+                }
+                
+                const winner = team1Marks >= 7 ? this.currentGame.team1 : this.currentGame.team2;
+                const loser = team1Marks >= 7 ? this.currentGame.team2 : this.currentGame.team1;
+                
+                this.tournament.teams.find(t => t.id === winner).wins++;
+                this.tournament.teams.find(t => t.id === loser).losses++;
+                this.tournament.teams.find(t => t.id === winner).totalMarks += Math.max(team1Marks, team2Marks);
+                this.tournament.teams.find(t => t.id === loser).totalMarks += Math.min(team1Marks, team2Marks);
+                
+                this.currentGame.status = 'completed';
+                this.currentGame.endTime = new Date().toISOString();
+                this.currentGame.winner = winner;
+                
+                this.save();
+                this.notify();
+                this.showView('leaderboard');
+                this.showMessage('Game completed successfully!', 'success');
+            }
+
+            displaySchedule() {
+                const round = document.getElementById('round-select').value;
+                if (!round) return;
+                
+                const scheduleContent = document.getElementById('schedule-content');
+                const games = this.tournament.schedule[round] || [];
+                
+                scheduleContent.innerHTML = `
+                    <h3>Round ${round}</h3>
+                    <div class="leaderboard-entry header">
+                        <div>Table</div>
+                        <div>Matchup</div>
+                        <div>Status</div>
+                        <div>Winner</div>
+                    </div>
+                    ${games.map(game => {
+                        const team1 = this.tournament.teams.find(t => t.id === game.team1);
+                        const team2 = this.tournament.teams.find(t => t.id === game.team2);
+                        const gameData = this.tournament.games[game.gameId];
+                        
+                        const team1Name = team1.isBye ? `${team1.name} <span class="bye-indicator">BYE</span>` : team1.name;
+                        const team2Name = team2.isBye ? `${team2.name} <span class="bye-indicator">BYE</span>` : team2.name;
+                        
+                        return `
+                            <div class="leaderboard-entry">
+                                <div>${game.table}</div>
+                                <div>${team1Name} vs ${team2Name}</div>
+                                <div><span class="game-status status-${gameData ? gameData.status : 'scheduled'}">${gameData ? gameData.status : 'Scheduled'}</span></div>
+                                <div>${gameData && gameData.winner ? this.tournament.teams.find(t => t.id === gameData.winner).name : '-'}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                `;
+            }
+
+            updateAnomalyDetection() {
+                const anomalies = [];
+                
+                this.tournament.teams.forEach(team => {
+                    if (team.isBye) return;
+                    
+                    if (team.stats.totalBids >= 5) {
+                        const successRate = team.stats.successfulBids / team.stats.totalBids;
+                        
+                        if (successRate > 0.85) {
+                            anomalies.push({
+                                team: team.name,
+                                type: 'High Success Rate',
+                                detail: `${(successRate * 100).toFixed(1)}% bid success rate (${team.stats.successfulBids}/${team.stats.totalBids} bids)`
+                            });
+                        }
+                        
+                        if (successRate < 0.3) {
+                            anomalies.push({
+                                team: team.name,
+                                type: 'Low Success Rate',
+                                detail: `${(successRate * 100).toFixed(1)}% bid success rate (${team.stats.successfulBids}/${team.stats.totalBids} bids)`
+                            });
+                        }
+                    }
+                });
+                
+                Object.values(this.tournament.games).forEach(game => {
+                    if (game.isByeGame) return;
+                    
+                    if (game.hands && game.hands.length > 10) {
+                        const actualBids = game.hands.filter(h => h.result !== 'all-pass');
+                        if (actualBids.length >= 5) {
+                            const team1Players = this.tournament.teams.find(t => t.id === game.team1).players;
+                            const team1Bids = actualBids.filter(h => team1Players.includes(h.winner)).length;
+                            const team2Bids = actualBids.length - team1Bids;
+                            
+                            if (Math.abs(team1Bids - team2Bids) > 6) {
+                                const team = this.tournament.teams.find(t => t.id === (team1Bids > team2Bids ? game.team1 : game.team2));
+                                anomalies.push({
+                                    team: team.name,
+                                    type: 'Bid Dominance',
+                                    detail: `Won ${Math.max(team1Bids, team2Bids)} out of ${actualBids.length} bidding hands`
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                const anomalyContent = document.getElementById('anomaly-content');
+                if (anomalies.length === 0) {
+                    anomalyContent.innerHTML = '<p style="color: var(--success);">No unusual patterns detected.</p>';
+                } else {
+                    anomalyContent.innerHTML = anomalies.map(a => `
+                        <div class="card stat-card danger">
+                            <h4>${a.team}</h4>
+                            <p><strong>${a.type}</strong></p>
+                            <p>${a.detail}</p>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            displayTeamStats() {
+                const teamId = document.getElementById('stats-team-select').value;
+                if (!teamId) return;
+                
+                const team = this.tournament.teams.find(t => t.id === teamId);
+                if (team.isBye) {
+                    document.getElementById('team-stats-content').innerHTML = `
+                        <div class="card stat-card warning">
+                            <h3>BYE Team</h3>
+                            <p>This is the automatic BYE team for odd-numbered tournaments.</p>
+                            <p>No statistics are tracked for BYE.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const successRate = team.stats.totalBids > 0 ? 
+                    (team.stats.successfulBids / team.stats.totalBids * 100).toFixed(1) : 0;
+                
+                document.getElementById('team-stats-content').innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Games</h3>
+                            <p>${team.wins + team.losses}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Win Rate</h3>
+                            <p>${team.wins + team.losses > 0 ? (team.wins / (team.wins + team.losses) * 100).toFixed(1) : 0}%</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Bids Won</h3>
+                            <p>${team.stats.totalBids}</p>
+                        </div>
+                        <div class="stat-card ${successRate > 80 ? 'danger' : successRate < 30 ? 'warning' : ''}">
+                            <h3>Bid Success Rate</h3>
+                            <p>${successRate}%</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Average Marks/Game</h3>
+                            <p>${team.wins + team.losses > 0 ? (team.totalMarks / (team.wins + team.losses)).toFixed(1) : 0}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Marks Won</h3>
+                            <p>${team.totalMarks}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            displayPlayerStats() {
+                const player = document.getElementById('stats-player-select').value;
+                const out = document.getElementById('player-stats-content');
+                if (!player || !this.tournament) {
+                    out.innerHTML = '';
+                    return;
+                }
+
+                let totalBids = 0;
+                let successfulBids = 0;
+                let totalMarksWon = 0;
+                let handsPlayed = 0;
+                let gamesPlayed = 0;
+
+                // Count games the player is part of
+                this.tournament.teams.forEach(team => {
+                    if (team.isBye) return;
+                    if (team.players.includes(player)) {
+                        // games where this team appears
+                        const gp = Object.values(this.tournament.games).filter(g => g.team1 === team.id || g.team2 === team.id).length;
+                        gamesPlayed += gp;
+                    }
+                });
+
+                // Aggregate across all hands
+                Object.values(this.tournament.games).forEach(game => {
+                    if (!game.hands) return;
+                    game.hands.forEach(hand => {
+                        const participated = hand.bids.some(b => b.player === player);
+                        if (participated) handsPlayed++;
+
+                        hand.bids.forEach(b => {
+                            if (b.player === player) totalBids++;
+                        });
+
+                        if (hand.result && hand.result !== 'all-pass') {
+                            if (hand.result === 'made' && hand.winner === player) {
+                                successfulBids++;
+                                totalMarksWon += hand.marks || 0;
+                            }
+                        }
+                    });
+                });
+
+                const successRate = totalBids > 0 ? (successfulBids / totalBids * 100).toFixed(1) : '0.0';
+
+                out.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Games Involved</h3>
+                            <p>${gamesPlayed}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Hands Participated</h3>
+                            <p>${handsPlayed}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Bids</h3>
+                            <p>${totalBids}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Successful Bids</h3>
+                            <p>${successfulBids} (${successRate}%)</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Marks Won</h3>
+                            <p>${totalMarksWon}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Avg Marks / Game</h3>
+                            <p>${gamesPlayed > 0 ? (totalMarksWon / gamesPlayed).toFixed(2) : '0.00'}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            updateClubPlayerCounter() {
+                const textarea = document.getElementById('club-players-input');
+                const counter = document.getElementById('club-player-count');
+                const saveBtn = document.getElementById('save-club-roster-btn');
+                if (!textarea || !counter) return;
+
+                const players = textarea.value.split('\n').map(p => p.trim()).filter(p => p);
+                const count = players.length;
+                counter.textContent = `${count} / ${this.maxClubPlayers} players`;
+
+                if (count > this.maxClubPlayers) {
+                    counter.style.color = 'var(--danger)';
+                    if (saveBtn) saveBtn.disabled = true;
+                } else {
+                    counter.style.color = '#666';
+                    if (saveBtn) saveBtn.disabled = false;
+                }
+            }
+
+            /* ------------------ Club night methods ------------------ */
+            saveClubRoster() {
+                const inputName = (document.getElementById('club-name').value || 'Default Club').trim();
+                const playersText = document.getElementById('club-players-input').value || '';
+                const players = playersText.split('\n').map(p => p.trim()).filter(p => p);
+                const permanent = document.getElementById('club-permanent').checked;
+
+                if (players.length < 2) {
+                    this.showMessage('Please enter at least 2 players for a roster', 'error');
+                    return;
+                }
+
+                if (players.length > this.maxClubPlayers) {
+                    this.showMessage(`Roster exceeds maximum of ${this.maxClubPlayers} players (you entered ${players.length}). Please reduce the list.`, 'error');
+                    return;
+                }
+
+                // load existing rosters (keyed by id)
+                let rosters = {};
+                try { rosters = JSON.parse(localStorage.getItem('clubRosters') || '{}'); } catch (e) { rosters = {}; }
+
+                const baseName = inputName || 'Default Club';
+                // compute a unique display name
+                const existingNames = Object.values(rosters).map(r => r.name);
+                let displayName = baseName;
+                if (existingNames.includes(displayName)) {
+                    let suffix = 2;
+                    while (existingNames.includes(`${baseName} (${suffix})`)) suffix++;
+                    displayName = `${baseName} (${suffix})`;
+                }
+
+                const id = this.generateTournamentId();
+                rosters[id] = { id, name: displayName, players, permanent, createdAt: new Date().toISOString() };
+                try { localStorage.setItem('clubRosters', JSON.stringify(rosters)); } catch (e) { console.error('Failed saving club rosters', e); }
+                this.clubRosters = rosters;
+
+                // Refresh roster list and auto-select the newly saved roster
+                try {
+                    this.loadClubRosters();
+                    const sel = document.getElementById('club-roster-select');
+                    if (sel) {
+                        sel.value = id;
+                        // ensure the selected roster is loaded into the UI
+                        this.selectClubRoster();
+                    }
+                } catch (e) { /* non-fatal */ }
+
+                // Initialize club state and load any existing games keyed by roster id
+                const gamesKey = `clubGames_${id}`;
+                let games = [];
+                try { games = JSON.parse(localStorage.getItem(gamesKey) || '[]'); } catch (e) { games = []; }
+                this.club = { id, name: displayName, players, games };
+
+                this.updateAllViews();
+                this.populateClubPlayerSelects();
+                this.updateClubView();
+                try { this.updateClubPlayerCounter(); } catch (e) {}
+                this.showMessage(`Roster '${displayName}' saved.`, 'success');
+            }
+
+            loadClubRosters() {
+                try {
+                    const rosters = JSON.parse(localStorage.getItem('clubRosters') || '{}');
+                    this.clubRosters = rosters || {};
+                } catch (e) {
+                    this.clubRosters = {};
+                }
+
+                const select = document.getElementById('club-roster-select');
+                const renameBtn = document.getElementById('club-rename-btn');
+                const deleteBtn = document.getElementById('club-delete-btn');
+                const exportBtn = document.getElementById('club-export-btn');
+                if (!select) return;
+                select.innerHTML = '<option value="">-- Select roster --</option>';
+                Object.values(this.clubRosters).forEach(roster => {
+                    select.innerHTML += `<option value="${roster.id}">${roster.name} (${roster.players.length} players)</option>`;
+                });
+                // disable rename/delete until a roster is selected
+                if (renameBtn) renameBtn.disabled = true;
+                if (deleteBtn) deleteBtn.disabled = true;
+                if (exportBtn) exportBtn.disabled = true;
+            }
+
+            selectClubRoster() {
+                const sel = document.getElementById('club-roster-select');
+                const id = sel.value;
+                if (!id) return;
+                const roster = this.clubRosters[id];
+                if (!roster) return;
+                const gamesKey = `clubGames_${id}`;
+                let games = [];
+                try { games = JSON.parse(localStorage.getItem(gamesKey) || '[]'); } catch (e) { games = []; }
+                this.club = { id: roster.id, name: roster.name, players: roster.players.slice(), games };
+
+                // populate textarea and selects
+                document.getElementById('club-name').value = roster.name;
+                document.getElementById('club-players-input').value = roster.players.join('\n');
+                document.getElementById('club-permanent').checked = !!roster.permanent;
+
+                this.populateClubPlayerSelects();
+                this.updateClubView();
+                try { this.updateClubPlayerCounter(); } catch (e) {}
+                // enable rename/delete now that a roster is selected
+                try { document.getElementById('club-rename-btn').disabled = false; } catch (e) {}
+                try { document.getElementById('club-delete-btn').disabled = false; } catch (e) {}
+                try { document.getElementById('club-export-btn').disabled = false; } catch (e) {}
+                this.showMessage(`Loaded roster '${roster.name}'`, 'success');
+            }
+
+            populateClubPlayerSelects() {
+                const players = this.club && this.club.players ? this.club.players : [];
+                const ids = ['club-team1-p1','club-team1-p2','club-team2-p1','club-team2-p2'];
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.innerHTML = '<option value="">-- Select player --</option>';
+                    players.forEach(p => el.innerHTML += `<option value="${p}">${p}</option>`);
+                });
+                // update the live counter anytime the selects are populated
+                try { this.updateClubPlayerCounter(); } catch (e) {}
+            }
+
+            recordClubGame() {
+                if (!this.club || !this.club.id) {
+                    this.showMessage('Please save or select a roster first', 'error');
+                    return;
+                }
+                const p1 = document.getElementById('club-team1-p1').value;
+                const p2 = document.getElementById('club-team1-p2').value;
+                const p3 = document.getElementById('club-team2-p1').value;
+                const p4 = document.getElementById('club-team2-p2').value;
+                const m1 = parseInt(document.getElementById('club-team1-marks').value) || 0;
+                const m2 = parseInt(document.getElementById('club-team2-marks').value) || 0;
+
+                const players = [p1,p2,p3,p4];
+                if (players.some(p => !p)) { this.showMessage('Please select all 4 players', 'error'); return; }
+                // check duplicate players
+                const uniq = new Set(players);
+                if (uniq.size !== 4) { this.showMessage('Players must be unique across both teams', 'error'); return; }
+
+                const game = {
+                    id: `club-${this.club.id}-${Date.now()}`,
+                    team1: [p1,p2],
+                    team2: [p3,p4],
+                    marks: { team1: m1, team2: m2 },
+                    timestamp: new Date().toISOString()
+                };
+
+                this.club.games.push(game);
+                const gamesKey = `clubGames_${this.club.id}`;
+                try { localStorage.setItem(gamesKey, JSON.stringify(this.club.games)); } catch (e) { console.error('Failed saving club games', e); }
+
+                this.updateClubView();
+                try { this.updateClubPlayerCounter(); } catch (e) {}
+                this.showMessage('Club game recorded', 'success');
+            }
+
+            clearClubData() {
+                if (!this.club || !this.club.id) { this.showMessage('No roster loaded', 'error'); return; }
+                if (!confirm('Clear all saved games for this roster? This cannot be undone.')) return;
+                this.club.games = [];
+                const gamesKey = `clubGames_${this.club.id}`;
+                localStorage.removeItem(gamesKey);
+                this.updateClubView();
+                try { this.updateClubPlayerCounter(); } catch (e) {}
+                this.showMessage('Club games cleared', 'success');
+            }
+
+            renameClubRoster() {
+                const sel = document.getElementById('club-roster-select');
+                const id = sel ? sel.value : null;
+                if (!id) { this.showMessage('Please select a roster to rename', 'error'); return; }
+
+                const roster = this.clubRosters[id];
+                if (!roster) { this.showMessage('Selected roster not found', 'error'); return; }
+
+                const newNameRaw = prompt('Enter new display name for the roster', roster.name || '');
+                if (newNameRaw === null) return; // cancelled
+                const newName = newNameRaw.trim();
+                if (!newName) { this.showMessage('Roster name cannot be empty', 'error'); return; }
+
+                // ensure unique display name among existing rosters
+                const others = Object.values(this.clubRosters).filter(r => r.id !== id).map(r => r.name);
+                let displayName = newName;
+                if (others.includes(displayName)) {
+                    // append suffix
+                    let suffix = 2;
+                    while (others.includes(`${newName} (${suffix})`)) suffix++;
+                    displayName = `${newName} (${suffix})`;
+                }
+
+                // save
+                try {
+                    const rosters = JSON.parse(localStorage.getItem('clubRosters') || '{}');
+                    if (!rosters[id]) { this.showMessage('Roster not found in storage', 'error'); return; }
+                    rosters[id].name = displayName;
+                    localStorage.setItem('clubRosters', JSON.stringify(rosters));
+                    this.clubRosters = rosters;
+                    // update UI
+                    this.loadClubRosters();
+                    // re-select the renamed roster
+                    const select = document.getElementById('club-roster-select');
+                    if (select) select.value = id;
+                    if (this.club && this.club.id === id) {
+                        this.club.name = displayName;
+                        document.getElementById('club-name').value = displayName;
+                    }
+                    this.showMessage(`Roster renamed to '${displayName}'`, 'success');
+                } catch (e) {
+                    console.error('Rename failed', e);
+                    this.showMessage('Failed to rename roster', 'error');
+                }
+            }
+
+            deleteClubRoster() {
+                const sel = document.getElementById('club-roster-select');
+                const id = sel ? sel.value : null;
+                if (!id) { this.showMessage('Please select a roster to delete', 'error'); return; }
+
+                if (!confirm('Delete selected roster and its saved games? This cannot be undone.')) return;
+
+                try {
+                    const rosters = JSON.parse(localStorage.getItem('clubRosters') || '{}');
+                    if (rosters[id]) delete rosters[id];
+                    localStorage.setItem('clubRosters', JSON.stringify(rosters));
+                    // remove saved games for that roster id
+                    const gamesKey = `clubGames_${id}`;
+                    localStorage.removeItem(gamesKey);
+                    this.clubRosters = rosters;
+
+                    // If the deleted roster was loaded, clear the UI
+                    if (this.club && this.club.id === id) {
+                        this.club = { id: null, name: null, players: [], games: [] };
+                        document.getElementById('club-name').value = '';
+                        document.getElementById('club-players-input').value = '';
+                        document.getElementById('club-permanent').checked = false;
+                        this.updateClubView();
+                        try { this.updateClubPlayerCounter(); } catch (e) {}
+                    }
+
+                    this.loadClubRosters();
+                    this.showMessage('Roster deleted', 'success');
+                } catch (e) {
+                    console.error('Delete failed', e);
+                    this.showMessage('Failed to delete roster', 'error');
+                }
+            }
+
+            exportClubRoster() {
+                const sel = document.getElementById('club-roster-select');
+                const id = sel ? sel.value : null;
+                if (!id) { this.showMessage('Please select a roster to export', 'error'); return; }
+
+                const roster = this.clubRosters[id];
+                if (!roster) { this.showMessage('Selected roster not found', 'error'); return; }
+
+                try {
+                    const data = JSON.stringify(roster, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const safeName = (roster.name || 'roster').replace(/[^a-z0-9-_ ]+/ig, '_');
+                    a.href = url;
+                    a.download = `${safeName}-${id}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    this.showMessage(`Roster '${roster.name}' exported`, 'success');
+                } catch (e) {
+                    console.error('Export failed', e);
+                    this.showMessage('Failed to export roster', 'error');
+                }
+            }
+
+            /* ------------------ Named tournament persistence ------------------ */
+            saveTournament() {
+                if (!this.tournament) { this.showMessage('No tournament to save. Initialize a tournament first.', 'error'); return; }
+                const nameInput = document.getElementById('tournament-name');
+                let displayName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Tournament ${new Date().toISOString()}`;
+
+                // load existing saved tournaments
+                let saved = {};
+                try { saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}'); } catch (e) { saved = {}; }
+
+                // check for existing with same display name
+                const existingEntry = Object.entries(saved).find(([k,v]) => v && v.name === displayName);
+                let id;
+                if (existingEntry) {
+                    // confirm overwrite
+                    const overwrite = confirm(`A saved tournament named '${displayName}' already exists. Click OK to overwrite, Cancel to cancel.`);
+                    if (!overwrite) { this.showMessage('Save cancelled', 'warning'); return; }
+                    id = existingEntry[0];
+                } else {
+                    id = this.generateTournamentId();
+                }
+
+                // store a copy of the tournament state (strip functions)
+                try {
+                    const toSave = Object.assign({}, this.tournament);
+                    saved[id] = { id, name: displayName, tournament: toSave, savedAt: new Date().toISOString() };
+                    localStorage.setItem('savedTournaments', JSON.stringify(saved));
+                    this.showMessage(`Tournament '${displayName}' saved.`, 'success');
+                    // refresh list and select saved
+                    this.loadTournamentList();
+                    const sel = document.getElementById('saved-tournaments-select');
+                    if (sel) { sel.value = id; }
+                } catch (e) {
+                    console.error('Failed saving tournament', e);
+                    this.showMessage('Failed to save tournament', 'error');
+                }
+            }
+
+            loadTournamentList() {
+                let saved = {};
+                try { saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}'); } catch (e) { saved = {}; }
+                this.savedTournaments = saved;
+                const sel = document.getElementById('saved-tournaments-select');
+                const renameBtn = document.getElementById('saved-tournament-rename-btn');
+                const deleteBtn = document.getElementById('saved-tournament-delete-btn');
+                const exportBtn = document.getElementById('saved-tournament-export-btn');
+                if (!sel) return;
+                sel.innerHTML = '<option value="">-- Load saved tournament --</option>';
+                Object.values(saved).forEach(s => {
+                    sel.innerHTML += `<option value="${s.id}">${s.name} (${new Date(s.savedAt).toLocaleString()})</option>`;
+                });
+                // disable rename/delete until a saved tournament is selected
+                if (renameBtn) renameBtn.disabled = true;
+                if (deleteBtn) deleteBtn.disabled = true;
+                if (exportBtn) exportBtn.disabled = true;
+            }
+
+            loadTournament() {
+                const sel = document.getElementById('saved-tournaments-select');
+                if (!sel) return;
+                const id = sel.value;
+                if (!id) return;
+                let saved = {};
+                try { saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}'); } catch (e) { saved = {}; }
+                const entry = saved[id];
+                if (!entry || !entry.tournament) { this.showMessage('Selected saved tournament not found', 'error'); return; }
+
+                try {
+                    this.tournament = entry.tournament;
+                    // ensure id/version fields exist
+                    this.tournament.id = this.tournament.id || id;
+                    this.tournament.version = this.tournament.version || this.version;
+                    this.updateAllViews();
+                    this.populateClubPlayerSelects();
+                    this.updateClubView();
+                    // enable rename/delete/export for saved tournaments
+                    try { document.getElementById('saved-tournament-rename-btn').disabled = false; } catch (e) {}
+                    try { document.getElementById('saved-tournament-delete-btn').disabled = false; } catch (e) {}
+                    try { document.getElementById('saved-tournament-export-btn').disabled = false; } catch (e) {}
+                    this.showMessage(`Tournament '${entry.name}' loaded.`, 'success');
+                } catch (e) {
+                    console.error('Failed loading tournament', e);
+                    this.showMessage('Failed to load tournament', 'error');
+                }
+            }
+
+            renameSavedTournament() {
+                const sel = document.getElementById('saved-tournaments-select');
+                const id = sel ? sel.value : null;
+                if (!id) { this.showMessage('Please select a saved tournament to rename', 'error'); return; }
+
+                let saved = {};
+                try { saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}'); } catch (e) { saved = {}; }
+                const entry = saved[id];
+                if (!entry) { this.showMessage('Saved tournament not found', 'error'); return; }
+
+                const newNameRaw = prompt('Enter new display name for the saved tournament', entry.name || '');
+                if (newNameRaw === null) return; // canceled
+                const newName = newNameRaw.trim();
+                if (!newName) { this.showMessage('Tournament name cannot be empty', 'error'); return; }
+
+                // ensure unique display name among saved tournaments
+                const others = Object.values(saved).filter(s => s.id !== id).map(s => s.name);
+                let displayName = newName;
+                if (others.includes(displayName)) {
+                    // append suffix to make unique
+                    let suffix = 2;
+                    while (others.includes(`${newName} (${suffix})`)) suffix++;
+                    displayName = `${newName} (${suffix})`;
+                }
+
+                try {
+                    saved[id].name = displayName;
+                    localStorage.setItem('savedTournaments', JSON.stringify(saved));
+                    this.savedTournaments = saved;
+                    this.loadTournamentList();
+                    const select = document.getElementById('saved-tournaments-select');
+                    if (select) select.value = id;
+                    this.showMessage(`Saved tournament renamed to '${displayName}'`, 'success');
+                } catch (e) {
+                    console.error('Rename failed', e);
+                    this.showMessage('Failed to rename saved tournament', 'error');
+                }
+            }
+
+            deleteSavedTournament() {
+                const sel = document.getElementById('saved-tournaments-select');
+                const id = sel ? sel.value : null;
+                if (!id) { this.showMessage('Please select a saved tournament to delete', 'error'); return; }
+
+                if (!confirm('Delete selected saved tournament? This cannot be undone.')) return;
+
+                try {
+                    const saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}');
+                    if (saved[id]) delete saved[id];
+                    localStorage.setItem('savedTournaments', JSON.stringify(saved));
+                    this.savedTournaments = saved;
+                    // If the deleted tournament is currently loaded, clear current tournament
+                    if (this.tournament && this.tournament.id === id) {
+                        this.tournament = null;
+                        // clear UI fields
+                        try { document.getElementById('tournament-name').value = ''; } catch (e) {}
+                        try { this.updateAllViews(); } catch (e) {}
+                    }
+                    this.loadTournamentList();
+                    this.showMessage('Saved tournament deleted', 'success');
+                } catch (e) {
+                    console.error('Delete failed', e);
+                    this.showMessage('Failed to delete saved tournament', 'error');
+                }
+            }
+
+            exportSavedTournament() {
+                const sel = document.getElementById('saved-tournaments-select');
+                const id = sel ? sel.value : null;
+                if (!id) { this.showMessage('Please select a saved tournament to export', 'error'); return; }
+
+                let saved = {};
+                try { saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}'); } catch (e) { saved = {}; }
+                const entry = saved[id];
+                if (!entry) { this.showMessage('Selected saved tournament not found', 'error'); return; }
+
+                try {
+                    const data = JSON.stringify(entry, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const safeName = (entry.name || 'tournament').replace(/[^a-z0-9-_ ]+/ig, '_');
+                    a.href = url;
+                    a.download = `${safeName}-${id}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    this.showMessage(`Saved tournament '${entry.name}' exported`, 'success');
+                } catch (e) {
+                    console.error('Export failed', e);
+                    this.showMessage('Failed to export saved tournament', 'error');
+                }
+            }
+
+            importSavedTournament() {
+                // create a file input dynamically and click it
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json';
+                input.onchange = (e) => {
+                    const files = e.target.files;
+                    if (files && files.length) this.handleImportedTournamentFile(files);
+                };
+                input.click();
+            }
+
+            handleImportedTournamentFile(files) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const text = evt.target.result;
+                        const parsed = JSON.parse(text);
+                        // Determine if parsed is a single entry or a map of entries
+                        let toMerge = {};
+                        if (parsed && parsed.id && parsed.name && parsed.tournament) {
+                            // single exported entry
+                            toMerge[parsed.id || this.generateTournamentId()] = parsed;
+                        } else if (parsed && typeof parsed === 'object') {
+                            // Could be an object mapping id -> entry, or array
+                            if (Array.isArray(parsed)) {
+                                parsed.forEach(item => {
+                                    if (item && item.id && item.name) {
+                                        toMerge[item.id || this.generateTournamentId()] = item;
+                                    }
+                                });
+                            } else {
+                                // treat as map-like; check if values look like saved entries
+                                const vals = Object.values(parsed);
+                                const looksLikeMap = vals.length && vals.every(v => v && v.name && v.tournament);
+                                if (looksLikeMap) {
+                                    Object.entries(parsed).forEach(([k,v]) => {
+                                        const nid = k || v.id || this.generateTournamentId();
+                                        toMerge[nid] = Object.assign({ id: nid }, v);
+                                    });
+                                } else if (parsed.name && parsed.tournament) {
+                                    const nid = parsed.id || this.generateTournamentId();
+                                    toMerge[nid] = Object.assign({ id: nid }, parsed);
+                                } else {
+                                    this.showMessage('Imported JSON did not contain recognizable saved tournament data', 'error');
+                                    return;
+                                }
+                            }
+                        } else {
+                            this.showMessage('Imported JSON did not contain recognizable saved tournament data', 'error');
+                            return;
+                        }
+
+                        // Merge into existing savedTournaments with conflict handling
+                        let saved = {};
+                        try { saved = JSON.parse(localStorage.getItem('savedTournaments') || '{}'); } catch (e) { saved = {}; }
+
+                        Object.values(toMerge).forEach(entry => {
+                            // if display name exists, ask to overwrite or rename
+                            const nameTaken = Object.values(saved).some(s => s.name === entry.name);
+                            if (nameTaken) {
+                                const overwrite = confirm(`A saved tournament named '${entry.name}' already exists. Click OK to OVERWRITE it, Cancel to import under a new name.`);
+                                if (overwrite) {
+                                    // find existing id and overwrite
+                                    const existingId = Object.entries(saved).find(([k,v]) => v.name === entry.name)[0];
+                                    saved[existingId] = Object.assign({ id: existingId }, entry);
+                                } else {
+                                    // pick a unique name by suffixing
+                                    let base = entry.name || 'Tournament';
+                                    let suffix = 2;
+                                    while (Object.values(saved).some(s => s.name === `${base} (${suffix})`)) suffix++;
+                                    const newName = `${base} (${suffix})`;
+                                    const nid = entry.id || this.generateTournamentId();
+                                    saved[nid] = Object.assign({}, entry, { id: nid, name: newName });
+                                }
+                            } else {
+                                const nid = entry.id || this.generateTournamentId();
+                                saved[nid] = Object.assign({}, entry, { id: nid });
+                            }
+                        });
+
+                        try { localStorage.setItem('savedTournaments', JSON.stringify(saved)); } catch (e) { console.error('Failed saving imported tournaments', e); }
+                        this.loadTournamentList();
+                        this.showMessage('Imported tournament(s) successfully', 'success');
+                    } catch (e) {
+                        console.error('Import failed', e);
+                        this.showMessage('Failed to import tournament JSON', 'error');
+                    }
+                };
+                reader.onerror = (e) => {
+                    console.error('File read error', e);
+                    this.showMessage('Failed to read file', 'error');
+                };
+                reader.readAsText(file);
+            }
+
+            save() {
+                // Autosave current tournament state to localStorage (simple backup)
+                try {
+                    if (this.tournament) {
+                        localStorage.setItem('tournamentData', JSON.stringify(this.tournament));
+                    }
+                } catch (e) {
+                    console.error('Failed autosave', e);
+                }
+            }
+
+            load() {
+                // Load autosaved tournament if present
+                try {
+                    const data = localStorage.getItem('tournamentData');
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        if (parsed && parsed.teams) {
+                            this.tournament = parsed;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed loading autosaved tournament', e);
+                }
+                // Load saved tournaments list into the UI
+                try { this.loadTournamentList(); } catch (e) {}
+                // If we loaded a tournament, update views
+                if (this.tournament) {
+                    try { this.updateAllViews(); } catch (e) {}
+                }
+            }
+
+            updateAllViews() {
+                if (!this.tournament) return;
+                
+                const gameSelect = document.getElementById('game-select');
+                gameSelect.innerHTML = '<option value="">-- Select a game --</option>';
+                
+                Object.values(this.tournament.games).forEach(game => {
+                    if (game.status === 'in-progress' && !game.isByeGame) {
+                        const team1 = this.tournament.teams.find(t => t.id === game.team1);
+                        const team2 = this.tournament.teams.find(t => t.id === game.team2);
+                        gameSelect.innerHTML += `<option value="${game.id}">Round ${game.round}, Table ${game.table}: ${team1.name} vs ${team2.name}</option>`;
+                    }
+                });
+                
+                const displayTeams = this.tournament.teams.filter(t => !t.isBye);
+                // Compute marks won/lost per team by aggregating game.marks
+                const teamMarks = {};
+                displayTeams.forEach(t => teamMarks[t.id] = { won: 0, lost: 0 });
+
+                Object.values(this.tournament.games).forEach(game => {
+                    if (!game || !game.marks) return;
+                    const t1 = game.team1;
+                    const t2 = game.team2;
+                    const m1 = game.marks && game.marks[t1] ? game.marks[t1] : 0;
+                    const m2 = game.marks && game.marks[t2] ? game.marks[t2] : 0;
+
+                    if (teamMarks[t1]) teamMarks[t1].won += m1;
+                    if (teamMarks[t1]) teamMarks[t1].lost += m2;
+                    if (teamMarks[t2]) teamMarks[t2].won += m2;
+                    if (teamMarks[t2]) teamMarks[t2].lost += m1;
+                });
+
+                // Sort by wins, then differential, then marks won
+                const sortedTeams = [...displayTeams].sort((a, b) => {
+                    if (a.wins !== b.wins) return b.wins - a.wins;
+                    const aDiff = (teamMarks[a.id].won - teamMarks[a.id].lost) || 0;
+                    const bDiff = (teamMarks[b.id].won - teamMarks[b.id].lost) || 0;
+                    if (aDiff !== bDiff) return bDiff - aDiff;
+                    return (teamMarks[b.id].won || 0) - (teamMarks[a.id].won || 0);
+                });
+
+                const leaderboardContent = document.getElementById('leaderboard-content');
+                leaderboardContent.innerHTML = sortedTeams.map((team, index) => {
+                    const marksWon = teamMarks[team.id] ? teamMarks[team.id].won : 0;
+                    const marksLost = teamMarks[team.id] ? teamMarks[team.id].lost : 0;
+                    const diff = marksWon - marksLost;
+                    const gamesPlayed = team.wins + team.losses;
+
+                    return `
+                    <div class="leaderboard-entry">
+                        <div>${index + 1}</div>
+                        <div><strong>${team.name}</strong><br><small>${team.players.join(' & ')}</small></div>
+                        <div>${team.wins}-${team.losses}</div>
+                        <div>${marksWon}</div>
+                        <div>${marksLost}</div>
+                        <div>${diff}</div>
+                        <div>${gamesPlayed}</div>
+                    </div>
+                `;
+                }).join('');
+                
+                const roundSelect = document.getElementById('round-select');
+                roundSelect.innerHTML = '<option value="">-- Select a round --</option>';
+                for (let i = 1; i <= this.tournament.numRounds; i++) {
+                    roundSelect.innerHTML += `<option value="${i}">Round ${i}</option>`;
+                }
+                
+                const statsSelect = document.getElementById('stats-team-select');
+                statsSelect.innerHTML = '<option value="">-- Select a team --</option>';
+                this.tournament.teams.forEach(team => {
+                    if (!team.isBye) {
+                        statsSelect.innerHTML += `<option value="${team.id}">${team.name}</option>`;
+                    }
+                });
+                // Populate player select for individual stats
+                const playerSelect = document.getElementById('stats-player-select');
+                if (playerSelect) {
+                    playerSelect.innerHTML = '<option value="">-- Select a player --</option>';
+                    const playersSet = new Set();
+                    this.tournament.teams.forEach(team => {
+                        if (!team.isBye) {
+                            team.players.forEach(p => { if (p) playersSet.add(p); });
+                        }
+                    });
+                    Array.from(playersSet).sort().forEach(p => {
+                        playerSelect.innerHTML += `<option value="${p}">${p}</option>`;
+                    });
+                }
+                this.updateAnomalyDetection();
+            }
+        }
+
+        // Initialize Application
+        const app = new TournamentScorer();
+        app.subscribe(() => app.updateAllViews());
+
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        app.exportCSV();
+                        break;
+                    case 'z':
+                        if (app.currentGame) {
+                            e.preventDefault();
+                            app.undoLastHand();
+                        }
+                        break;
+                }
+            }
+        });
+
+        // Load on startup
+        window.onload = function() {
+            app.load();
+            // load saved club rosters into the UI
+            try { app.loadClubRosters(); } catch (e) { console.warn('No club rosters to load.'); }
+            app.showView('setup');
+            try { app.updateClubPlayerCounter(); } catch (e) {}
+        };
+    </script>
+</body>
+</html>
